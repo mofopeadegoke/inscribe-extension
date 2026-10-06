@@ -13,7 +13,9 @@
      "permissions": [
         "storage",
         "activeTab", 
-        "contextMenus"
+        "contextMenus",
+        "alarms",
+        "notifications"
     ],
     "icons": {
         "48": "images/InscribeNew48.png",
@@ -28,7 +30,7 @@
         },
         {
             "matches": ["<all_urls>"],
-            "js": ["ExtPay.js", "contentOwn.js"]
+            "js": ["shared/timePhrases.js", "contentOwn.js"]
         }
     ],
     "web_accessible_resources": [

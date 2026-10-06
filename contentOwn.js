@@ -1,611 +1,340 @@
-const extpay = ExtPay("inscribe");
-let noteContainer = document.createElement("div");
-noteContainer.classList.add("parentContainer");
-let noteRow = document.createElement("div");
-let moreIcon = document.createElement("span");
-moreIcon.classList.add("noteMoreIcon_");
-let dateText = document.createElement("p");
-let moreContent = document.createElement("article");
-let themeContainer = document.createElement("article");
-let redTheme = document.createElement("div");
-let blueTheme = document.createElement("div");
-let yellowTheme = document.createElement("div");
-let greenTheme = document.createElement("div");
-let mintTheme = document.createElement("div");
-let blackTheme = document.createElement("div");
-let whiteTheme = document.createElement("div");
-let deleteText = document.createElement("button");
-let saveNoteLocallyBtn = document.createElement("button"),
-  acctIcon = document.createElement("article"); // Creating the account icon elemnt on the sticky note
-acctIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" height="16" width="14" viewBox="0 0 448 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path fill="#000000" d="M304 128a80 80 0 1 0 -160 0 80 80 0 1 0 160 0zM96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM49.3 464H398.7c-8.9-63.3-63.3-112-129-112H178.3c-65.7 0-120.1 48.7-129 112zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3z"/></svg>`; // Putting an svg in the elemnet
-acctIcon.classList.add("acctContainer");
-acctIcon.style.cursor = "pointer"; // Styling it a bit
-// FAB Code
-let microphoneFAB = document.createElement("button");
-microphoneFAB.classList.add("microphone__");
-// End of FAB code
-moreContent.classList.add("container_");
-themeContainer.classList.add("theme_");
-redTheme.classList.add("red_");
-blueTheme.classList.add("blue_");
-yellowTheme.classList.add("yellow_");
-greenTheme.classList.add("green_");
-mintTheme.classList.add("mint_");
-blackTheme.classList.add("black_");
-whiteTheme.classList.add("white_");
-deleteText.textContent = "Delete";
-saveNoteLocallyBtn.append("Save note locally");
-deleteText.classList.add("delTxt");
-saveNoteLocallyBtn.classList.add("saveNoteLocallyEl");
-let d = new Date();
-dateText.textContent = `${d.getDate()} - ${
-  d.getMonth() + 1
-} - ${d.getFullYear()}`;
-moreIcon.textContent = "...";
-// FAB Code
-microphoneFAB.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" height="17.6" width="13.2" viewBox="0 0 384 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path fill="#333333" d="M192 0C139 0 96 43 96 96V256c0 53 43 96 96 96s96-43 96-96V96c0-53-43-96-96-96zM64 216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 89.1 66.2 162.7 152 174.4V464H120c-13.3 0-24 10.7-24 24s10.7 24 24 24h72 72c13.3 0 24-10.7 24-24s-10.7-24-24-24H216V430.4c85.8-11.7 152-85.3 152-174.4V216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 70.7-57.3 128-128 128s-128-57.3-128-128V216z"/></svg>`;
-microphoneFAB.style.backgroundColor = "#ccc";
-microphoneFAB.style.color = "#fff";
-microphoneFAB.style.border = "none";
-microphoneFAB.style.borderRadius = "50%";
-microphoneFAB.style.fontSize = "30px";
-microphoneFAB.style.width = "40px";
-microphoneFAB.style.aspectRatio = 1;
-microphoneFAB.style.cursor = "pointer";
-microphoneFAB.style.position = "absolute";
-microphoneFAB.style.bottom = "10px";
-microphoneFAB.style.right = "10px";
-microphoneFAB.style.boxShadow = "0 2px 5px rgba(0, 0, 0, 0.2)";
-microphoneFAB.style.transition = "background-color 0.3s ease";
-if (navigator.onLine) {
-  microphoneFAB.style.opacity = 1;
-} else {
-  microphoneFAB.style.pointerEvents = "none";
-  microphoneFAB.style.opacity = 0.5;
-}
-microphoneFAB.style.display = "none";
-// End of FAB Code
+// Inscribe sticky note.
+// One note per site, stored in chrome.storage.local under "sticky:<origin>" as
+// { text, visible }. The theme is shared by all sticky notes ("stickyTheme").
+// The UI lives in a closed shadow root so the page's CSS and scripts can't
+// reach it, and it is only built when there is a note to show.
+(() => {
+  const NOTE_KEY = `sticky:${location.origin}`;
+  const THEME_KEY = "stickyTheme";
+  const FREE_SAVES_PER_MONTH = 10;
+  const SAVE_DELAY_MS = 400;
 
-let noteContent = document.createElement("div");
-noteContainer.style.color = "black";
-noteContainer.style.position = "absolute";
-noteContainer.style.right = "10px";
-noteContainer.style.top = "10px";
-noteContainer.style.transition = "all 0.0001s ease-out";
-noteContainer.style.zIndex = 999999999999999;
-noteContainer.style.fontSize = "14px";
-noteContainer.style.width = "fit-content";
-noteContainer.style.height = "fit-content";
-noteContainer.style.display = "flex";
-noteContainer.style.flexDirection = "column";
-noteContainer.style.boxShadow = "0.4px 0.4px 10px 0.01px black";
-noteContainer.style.transform = "scale(0)";
-noteContainer.style.transformOrigin = "top left";
-noteContainer.style.transition = "transform 1s ease-out";
-noteRow.style.minWidth = "180px";
-noteRow.style.minHeight = "25px";
-noteRow.style.maxWidth = "100%";
-noteRow.style.backgroundColor = "#ccc";
-noteRow.style.height = "25px";
-noteRow.style.cursor = "move";
-noteRow.style.display = "flex";
-noteRow.style.flexDirection = "row";
-noteRow.style.justifyContent = "space-between";
-noteRow.style.alignItems = "center";
-noteRow.style.paddingInline = "5px";
-noteContent.contentEditable = true;
-noteContent.style.minWidth = "180px";
-noteContent.style.width = "180px";
-noteContent.style.minHeight = "100px";
-noteContent.style.padding = "5px";
-noteContent.style.height = "176px";
-noteContent.style.overflow = "auto";
-noteContent.style.backgroundColor = "#f5f5f5";
-noteContent.style.outline = "none";
-noteContent.style.resize = "both";
-moreIcon.style.display = "inline-block";
-moreIcon.style.fontSize = "20px";
-moreIcon.style.fontWeight = "bolder";
-moreIcon.style.letterSpacing = "1.2px";
-moreIcon.style.padding = "0px";
-moreIcon.style.marginTop = "-10px";
-moreIcon.style.textAlign = "center";
-moreIcon.style.overflow = "hidden";
+  const STICKY_THEMES = {
+    christmasMode: { swatch: "#c54245", body: ["#c54245", "#ECECEE"], bar: ["#B12E31", "#ECECEE"] },
+    winterMode: { swatch: "#89ABE3FF", body: ["#89ABE3FF", "#FCF6F5FF"], bar: ["#6C8DB7FF", "#FCF6F5FF"] },
+    yellowMode: { swatch: "#F2AA4CFF", body: ["#F2AA4CFF", "#101820FF"], bar: ["#D1883AFF", "#101820FF"] },
+    islandWhiteMode: { swatch: "#2BAE66FF", body: ["#2BAE66FF", "#FCF6F5FF"], bar: ["#1D8E4DFF", "#FCF6F5FF"] },
+    mintMode: { swatch: "#ADEFD1FF", body: ["#222", "#ADEFD1FF"], bar: ["#111", "#ADEFD1FF"] },
+    blackMode: { swatch: "#101820FF", body: ["#101820FF", "#ddd"], bar: ["#080C14FF", "#ddd"] },
+    whiteMode: { swatch: "#dddccc", body: ["#f5f5f5", "black"], bar: ["#ccc", "black"] },
+  };
+  const DEFAULT_THEME = "whiteMode";
 
-// moreIcon.style.verticalAlign = "middle";
-dateText.style.margin = "0px";
-dateText.style.display = "inline-flex";
-dateText.style.fontSize = "10px";
-themeContainer.append(
-  redTheme,
-  blueTheme,
-  yellowTheme,
-  greenTheme,
-  mintTheme,
-  blackTheme,
-  whiteTheme
-);
-moreContent.append(themeContainer, deleteText, saveNoteLocallyBtn);
-noteRow.append(moreIcon, dateText, acctIcon);
-noteContent.append(microphoneFAB);
-noteContainer.append(noteRow, noteContent, moreContent);
-let active = false;
-let currentX, currentY, initialX, initialY;
-noteRow.addEventListener("mousedown", dragStart);
-noteRow.addEventListener("mouseup", dragEnd);
-// noteRow.addEventListener("mouseout", dragEnd);
-noteRow.addEventListener("mousemove", drag);
+  const ACCOUNT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" height="16" width="14" viewBox="0 0 448 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path fill="currentColor" d="M304 128a80 80 0 1 0 -160 0 80 80 0 1 0 160 0zM96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM49.3 464H398.7c-8.9-63.3-63.3-112-129-112H178.3c-65.7 0-120.1 48.7-129 112zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3z"/></svg>`;
+  const MIC_ICON = `<svg xmlns="http://www.w3.org/2000/svg" height="17.6" width="13.2" viewBox="0 0 384 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path fill="#333333" d="M192 0C139 0 96 43 96 96V256c0 53 43 96 96 96s96-43 96-96V96c0-53-43-96-96-96zM64 216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 89.1 66.2 162.7 152 174.4V464H120c-13.3 0-24 10.7-24 24s10.7 24 24 24h72 72c13.3 0 24-10.7 24-24s-10.7-24-24-24H216V430.4c85.8-11.7 152-85.3 152-174.4V216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 70.7-57.3 128-128 128s-128-57.3-128-128V216z"/></svg>`;
 
-function dragStart(e) {
-  e.preventDefault();
-  let rect = noteContainer.getBoundingClientRect();
-  initialX = e.clientX - rect.left;
-  initialY = e.clientY - rect.top;
-  active = true;
-  console.log(rect.height);
-  console.log(rect.width);
-}
+  const STYLES = `
+    :host { all: initial; }
+    .note {
+      position: absolute; top: 10px; right: 10px; z-index: 2147483647;
+      display: flex; flex-direction: column; width: fit-content;
+      color: black; font: 14px sans-serif;
+      box-shadow: 0.4px 0.4px 10px 0.01px black;
+      transform: scale(0); transform-origin: top left;
+      transition: transform 1s ease-out;
+    }
+    .note.open { transform: scale(1); }
+    .bar {
+      display: flex; justify-content: space-between; align-items: center;
+      min-width: 180px; height: 25px; padding-inline: 5px; cursor: move;
+    }
+    .more {
+      display: inline-block; margin-top: -10px; font-size: 20px; font-weight: bolder;
+      letter-spacing: 1.2px; cursor: pointer; user-select: none;
+    }
+    .date { margin: 0; font-size: 10px; }
+    .account { cursor: pointer; display: inline-flex; }
+    .bodyWrap { position: relative; }
+    .body {
+      width: 180px; min-width: 180px; height: 176px; min-height: 100px;
+      padding: 5px; overflow: auto; outline: none; resize: both;
+      box-sizing: content-box; white-space: pre-wrap;
+    }
+    .time { background-color: yellow; color: black; }
+    .mic {
+      display: none; /* hidden until the in-note dictation feature ships */
+      position: absolute; bottom: 10px; right: 10px; width: 40px; aspect-ratio: 1;
+      border: none; border-radius: 50%; background: #ccc; cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .menu {
+      position: absolute; top: 0; left: 0; width: 100%; min-width: 180px;
+      background: white; transform: scaleY(0); transform-origin: top;
+      transition: all 0.1s ease-in;
+    }
+    .menu.open { transform: scaleY(1); }
+    .themes { display: flex; height: 35px; background: black; }
+    .themes button { flex: 1; border: none; cursor: pointer; }
+    .menu > button {
+      display: block; width: 100%; padding: 5px 10px; border: none;
+      background: white; color: black; text-align: left; cursor: pointer; font: inherit;
+    }
+    .menu > .save { border-top: 1px solid #aaa; border-bottom: 1px solid #aaa; }
+  `;
 
-function dragEnd() {
-  active = false;
-}
+  // ---------- storage ----------
 
-function drag(e) {
-  if (!active) {
-    return;
+  async function loadNote() {
+    const { [NOTE_KEY]: note } = await chrome.storage.local.get(NOTE_KEY);
+    return note || null;
   }
 
-  // if (
-  //   noteContainer.getBoundingClientRect().left < 10 ||
-  //   noteContainer.getBoundingClientRect().top < 10
-  // ) {
-  //   dragEnd();
-  //   currentX = e.clientX - initialX;
-  //   currentY = e.clientY - initialY;
-  //   noteContainer.style.left = currentX + 10 + "px";
-  //   noteContainer.style.top = currentY + 10 + "px";
-  //   return;
-  // }
-
-  e.preventDefault();
-  currentX = e.clientX - initialX;
-  currentY = e.clientY - initialY;
-  noteContainer.style.left = currentX + "px";
-  noteContainer.style.top = currentY + "px";
-  // updatePosition();
-}
-
-// function updatePosition() {}
-
-// Assuming you have event listeners set up elsewhere
-noteRow.addEventListener("mousedown", dragStart);
-document.addEventListener("mouseup", dragEnd);
-document.addEventListener("mousemove", drag);
-
-document.body.append(noteContainer);
-
-let containerEl = document.querySelector(".container_");
-let themeContainerEl = document.querySelector(".theme_");
-let themeEls = document.querySelectorAll(".container_ div");
-let containerButtonEl = document.querySelector(".container_ button");
-let saveNoteLocallyBtnEl = document.querySelector(
-  ".container_ .saveNoteLocallyEl"
-);
-let moreIconEl = document.querySelector(".noteMoreIcon_");
-containerEl.style.minWidth = "180px";
-containerEl.style.width = "100%";
-containerEl.style.height = "88px";
-containerEl.style.background = "white";
-containerEl.style.position = "absolute";
-containerEl.style.top = "0px";
-containerEl.style.left = "0px";
-containerEl.style.transform = "scaleY(0)";
-containerEl.style.transformOrigin = "top";
-containerEl.style.transition = "all 0.1s ease-in";
-themeContainerEl.style.display = "flex";
-themeContainerEl.style.width = "100%";
-themeContainerEl.style.height = "35px";
-themeContainerEl.style.background = "black";
-themeContainerEl.style.flexDirection = "row";
-themeContainerEl.style.marginBottom = "0px";
-moreIconEl.addEventListener("mouseover", () => {
-  containerEl.style.transform = "scaleY(1)";
-});
-containerEl.addEventListener("mouseover", () => {
-  containerEl.style.transform = "scaleY(1)";
-});
-containerEl.addEventListener("mouseleave", () => {
-  containerEl.style.transform = "scaleY(0)";
-});
-let themeArr = ["red", "blue", "yellow", "green", "mint", "black", "white"];
-themeEls.forEach((element) => {
-  element.style.width = "calc(100% / 7)";
-  element.style.height = "35px";
-  if (element.className == "red_") {
-    element.style.background = "#c54245";
-    element.addEventListener("click", () => {
-      noteContent.style.backgroundColor = "#c54245";
-      noteContent.style.color = "#ECECEE";
-      noteRow.style.backgroundColor = "#B12E31";
-      noteRow.style.color = "#ECECEE";
-      localStorage.setItem("theme", "christmasMode");
-    });
-  } else if (element.className == "blue_") {
-    element.style.background = "#89ABE3FF";
-    element.addEventListener("click", () => {
-      noteContent.style.backgroundColor = "#89ABE3FF";
-      noteContent.style.color = "#FCF6F5FF";
-      noteRow.style.backgroundColor = "#6C8DB7FF";
-      noteRow.style.color = "#FCF6F5FF";
-      localStorage.setItem("theme", "winterMode");
-    });
-  } else if (element.className == "yellow_") {
-    element.style.background = "#F2AA4CFF";
-    element.addEventListener("click", () => {
-      noteContent.style.backgroundColor = "#F2AA4CFF";
-      noteContent.style.color = "#101820FF";
-      noteRow.style.backgroundColor = "#D1883AFF";
-      noteRow.style.color = "#101820FF";
-      localStorage.setItem("theme", "yellowMode");
-    });
-  } else if (element.className == "green_") {
-    element.style.background = "#2BAE66FF";
-    element.addEventListener("click", () => {
-      noteContent.style.backgroundColor = "#2BAE66FF";
-      noteContent.style.color = "#FCF6F5FF";
-      noteRow.style.backgroundColor = "#1D8E4DFF";
-      noteRow.style.color = "#FCF6F5FF";
-      localStorage.setItem("theme", "islandWhiteMode");
-    });
-  } else if (element.className == "mint_") {
-    element.style.background = "#ADEFD1FF";
-    element.addEventListener("click", () => {
-      noteContent.style.backgroundColor = "#222";
-      noteContent.style.color = "#ADEFD1FF";
-      noteRow.style.backgroundColor = "#111";
-      noteRow.style.color = "#ADEFD1FF";
-      localStorage.setItem("theme", "mintMode");
-    });
-  } else if (element.className == "black_") {
-    element.style.background = "#101820FF";
-    element.addEventListener("click", () => {
-      noteContent.style.backgroundColor = "#101820FF";
-      noteContent.style.color = "#ddd";
-      noteRow.style.backgroundColor = "#080C14FF";
-      noteRow.style.color = "#ddd";
-      localStorage.setItem("theme", "blackMode");
-    });
-  } else if (element.className == "white_") {
-    element.style.background = "#dddccc";
-    element.addEventListener("click", () => {
-      noteContent.style.backgroundColor = "#f5f5f5";
-      noteContent.style.color = "black";
-      noteRow.style.backgroundColor = "#ccc";
-      noteRow.style.color = "black";
-      localStorage.setItem("theme", "whiteMode");
-    });
-  }
-});
-
-// Styling Delete button on the sticky note
-containerButtonEl.style.padding = "5px 10px";
-containerButtonEl.style.marginTop = "0px";
-containerButtonEl.style.display = "block";
-containerButtonEl.style.border = "none";
-containerButtonEl.style.width = "100%";
-containerButtonEl.style.textAlign = "left";
-
-// Styling Save note locally button on the sticky note
-saveNoteLocallyBtnEl.style.padding = "5px 10px";
-saveNoteLocallyBtnEl.style.marginTop = "0px";
-saveNoteLocallyBtnEl.style.display = "flex";
-saveNoteLocallyBtnEl.style.border = "none";
-saveNoteLocallyBtnEl.style.width = "100%";
-saveNoteLocallyBtnEl.style.textAlign = "left";
-saveNoteLocallyBtnEl.style.cursor = "pointer";
-saveNoteLocallyBtnEl.style.flexFlow = "row wrap";
-saveNoteLocallyBtnEl.style.columnGap = "5px";
-saveNoteLocallyBtnEl.style.alignItems = "center";
-saveNoteLocallyBtnEl.style.borderTop = "1px solid #aaa";
-saveNoteLocallyBtnEl.style.borderBottom = "1px solid #aaa";
-
-// Function to check if the user has exceeded the limit
-function hasExceededLimit() {
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1; // Months are zero-based, so add 1
-  const storageKey = `userActions_${currentMonth}`;
-
-  // Retrieve the count from local storage
-  const userActionCount = parseInt(localStorage.getItem(storageKey)) || 0;
-
-  // Check if the user has exceeded the limit
-  return userActionCount >= 10;
-}
-
-// Function to perform the user action
-function saveLocally() {
-  if (hasExceededLimit()) {
-    extpay.openPaymentPage();
-    return;
+  async function saveNote(patch) {
+    const current = (await loadNote()) || { text: "", visible: false };
+    await chrome.storage.local.set({ [NOTE_KEY]: { ...current, ...patch } });
   }
 
-  // Perform the user action
-  const blob = new Blob([noteContent.textContent], {
-    type: "text/plain",
-  });
-  const fileUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.download = "inscribe_note";
-  link.href = fileUrl;
-  link.click();
-  // Update the count in local storage
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1; // Months are zero-based, so add 1
-  const storageKey = `userActions_${currentMonth}`;
+  async function loadTheme() {
+    const { [THEME_KEY]: theme } = await chrome.storage.local.get(THEME_KEY);
+    return STICKY_THEMES[theme] ? theme : DEFAULT_THEME;
+  }
 
-  // Retrieve the current count or default to 0
-  const userActionCount = parseInt(localStorage.getItem(storageKey)) || 0;
+  // Before v3 the note lived in the website's own localStorage. Move it into
+  // chrome.storage, but only when the values look like Inscribe's. The site's
+  // "theme" key is only read, never removed: it may belong to the website.
+  async function migrateFromPageStorage() {
+    let page;
+    try {
+      page = window.localStorage;
+    } catch (err) {
+      return; // storage blocked (sandboxed frame, privacy settings)
+    }
+    const rawText = page.getItem("liveNote");
+    const rawVisible = page.getItem("isStickyNote");
+    const rawTheme = page.getItem("theme");
 
-  // Increment the count
-  localStorage.setItem(storageKey, userActionCount + 1);
+    let lines = null;
+    try {
+      const parsed = JSON.parse(rawText);
+      if (Array.isArray(parsed) && parsed.every((l) => typeof l === "string")) lines = parsed;
+    } catch (err) {
+      // not ours
+    }
+    const visibleIsOurs = rawVisible === "true" || rawVisible === "false";
+    if (lines === null && !visibleIsOurs) return;
 
-  console.log("User action performed successfully.");
-}
+    if (!(await loadNote())) {
+      await saveNote({ text: (lines || []).join("\n"), visible: rawVisible === "true" });
+    }
+    if (STICKY_THEMES[rawTheme]) {
+      const { [THEME_KEY]: existing } = await chrome.storage.local.get(THEME_KEY);
+      if (!existing) await chrome.storage.local.set({ [THEME_KEY]: rawTheme });
+    }
+    // Deleting a note used to leave liveNote as "".
+    if (lines !== null || rawText === "") page.removeItem("liveNote");
+    if (visibleIsOurs) page.removeItem("isStickyNote");
+    Object.keys(page)
+      .filter((key) => /^userActions_\d+$/.test(key))
+      .forEach((key) => page.removeItem(key));
+  }
 
-// Saving notes locally
-saveNoteLocallyBtnEl.addEventListener("click", () => {
-  extpay
-    .getUser()
-    .then((user) => {
-      if (user.paid) {
-        const blob = new Blob([noteContent.textContent], {
-          type: "text/plain",
-        });
-        const fileUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.download = "inscribe_note";
-        link.href = fileUrl;
-        link.click();
-      } else {
-        saveLocally();
-      }
-    })
-    .catch((err) => {
-      // document.querySelector("p").innerHTML =
-      //   "Error fetching data :( Check that your ExtensionPay id is correct and you're connected to the internet";
+  // ---------- payment ----------
+
+  // Payment status lives in the background worker; content scripts ask it.
+  function getUser() {
+    return chrome.runtime.sendMessage({ type: "getUser" }).then((res) => {
+      if (!res || res.error) throw new Error(res ? res.error : "No response");
+      return res.user;
     });
-});
-
-// Auto saving
-// var liveSavingNote = "";
-// const customEevent = new Event("contentChange");
-// const observer = new MutationObserver((mutations) => {
-//   mutations.forEach((mutation) => {
-//     // console.log("Change detected: ", mutation);
-//     liveSavingNote = noteContent.textContent;
-//     const lines = liveSavingNote;
-//     let storedTextArray = [];
-//     storedTextArray = [...storedTextArray, ...lines];
-//     var arrayStr = JSON.stringify(storedTextArray);
-//     // console.log(arrayStr);
-//     localStorage.setItem("liveNote", arrayStr);
-//   });
-// });
-// const config = { attributes: true, childList: true, subtree: true };
-// observer.observe(noteContent, config);
-// noteContent.addEventListener("change", () => {
-//   if (previousValue !== noteContent.textContent) {
-//     previousValue = noteContent.textContent;
-//     noteContent.dispatchEvent(customEevent);
-//   }
-// });
-
-// var value, arrLocalStr;
-// noteContent.addEventListener("change", (e) => {
-//   liveSavingNote = noteContent.innerText;
-//   const lines = liveSavingNote.split("\n");
-//   let storedTextArray = [];
-//   storedTextArray = [...storedTextArray, ...lines];
-//   var arrayStr = JSON.stringify(storedTextArray);
-//   console.log(arrayStr);
-//   localStorage.setItem("liveNote", arrayStr);
-// });
-let previousValue = noteContent.textContent;
-
-noteContent.addEventListener("input", () => {
-  if (previousValue !== noteContent.textContent) {
-    previousValue = noteContent.textContent;
-    const event = new Event("change");
-    noteContent.dispatchEvent(event);
   }
-});
 
-var value, arrLocalStr;
-var liveSavingNote = "";
-noteContent.addEventListener("change", (e) => {
-  liveSavingNote = noteContent.innerText;
-  const lines = liveSavingNote.split("\n");
-  let storedTextArray = [];
-  storedTextArray = [...storedTextArray, ...lines];
-  var arrayStr = JSON.stringify(storedTextArray);
-  // console.log(arrayStr);
-  localStorage.setItem("liveNote", arrayStr);
-});
-value = localStorage.getItem("liveNote");
-if (value) {
-  arrLocalStr = JSON.parse(value);
-  noteContent.innerHTML += arrLocalStr.join("<br>");
-}
-let themeValue = localStorage.getItem("theme");
-if (themeValue === "christmasMode") {
-  noteContent.style.backgroundColor = "#c54245";
-  noteContent.style.color = "#ECECEE";
-  noteRow.style.backgroundColor = "#B12E31";
-  noteRow.style.color = "#ECECEE";
-} else if (themeValue === "winterMode") {
-  noteContent.style.backgroundColor = "#89ABE3FF";
-  noteContent.style.color = "#FCF6F5FF";
-  noteRow.style.backgroundColor = "#6C8DB7FF";
-  noteRow.style.color = "#FCF6F5FF";
-} else if (themeValue === "yellowMode") {
-  noteContent.style.backgroundColor = "#F2AA4CFF";
-  noteContent.style.color = "#101820FF";
-  noteRow.style.backgroundColor = "#D1883AFF";
-  noteRow.style.color = "#101820FF";
-} else if (themeValue === "islandWhiteMode") {
-  noteContent.style.backgroundColor = "#2BAE66FF";
-  noteContent.style.color = "#FCF6F5FF";
-  noteRow.style.backgroundColor = "#1D8E4DFF";
-  noteRow.style.color = "#FCF6F5FF";
-} else if (themeValue === "mintMode") {
-  noteContent.style.backgroundColor = "#222";
-  noteContent.style.color = "#ADEFD1FF";
-  noteRow.style.backgroundColor = "#111";
-  noteRow.style.color = "#ADEFD1FF";
-} else if (themeValue === "blackMode") {
-  noteContent.style.backgroundColor = "#101820FF";
-  noteContent.style.color = "#ddd";
-  noteRow.style.backgroundColor = "#080C14FF";
-  noteRow.style.color = "#ddd";
-} else if (themeValue === "whiteMode") {
-  noteContent.style.backgroundColor = "#f5f5f5";
-  noteContent.style.color = "#000";
-  noteRow.style.backgroundColor = "#ccc";
-  noteRow.style.color = "#000";
-}
-
-let delTxtEl = document.querySelector(".delTxt");
-delTxtEl.style.cursor = "pointer";
-delTxtEl.addEventListener("click", () => {
-  let confirmDel = confirm("Are you sure you want to delete note?");
-  if (!confirmDel) return;
-  noteContent.style.backgroundColor = "#f5f5f5";
-  noteContent.style.color = "#000";
-  noteRow.style.backgroundColor = "#ccc";
-  noteRow.style.color = "#000";
-  localStorage.setItem("liveNote", "");
-  localStorage.setItem("theme", "whiteMode");
-  noteContainer.style.transform = "scale(0)";
-  localStorage.setItem("isStickyNote", "false");
-  noteContainer.remove();
-});
-if (localStorage.getItem("isStickyNote") == "true") {
-  noteContainer.style.transform = "scale(1)";
-} else if (localStorage.getItem("isStickyNote") == "false") {
-  noteContainer.style.transform = "scale(0)";
-} else {
-  noteContainer.style.transform = "scale(0)";
-}
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.action === "runContentScript") {
-    document.body.append(noteContainer);
-    noteContainer.style.transform = "scale(1)";
-    noteContent.textContent = "";
-    localStorage.setItem("isStickyNote", "true");
-    sendResponse({ msg: "Done" });
+  function openPaymentPage() {
+    chrome.runtime.sendMessage({ type: "openPaymentPage" });
   }
-});
-// FAB Code
-let microphoneEl = document.querySelector(".microphone__");
 
-microphoneEl.addEventListener("click", () => {
-  var speech = true;
-  window.SpeechRecognition = window.webkitSpeechRecognition;
-  const recognition = new SpeechRecognition();
-  recognition.interimResults = false;
-  recognition.addEventListener("result", (e) => {
-    const transcript = Array.from(e.results)
-      .map((result) => result[0])
-      .map((result) => result.transcript);
-    let speechValue = transcript + " ";
-    noteContent.textContent += speechValue;
-    // noteContent.dispatchEvent(customEevent);
-    noteContent.append(microphoneFAB);
-  });
-  if (speech == true) {
+  function monthKey(date = new Date()) {
+    return `freeStickySaves:${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  // ---------- UI ----------
+
+  let ui = null;
+
+  function buildUI() {
+    const host = document.createElement("div");
+    const shadow = host.attachShadow({ mode: "closed" });
+    const now = new Date();
+    shadow.innerHTML = `
+      <style>${STYLES}</style>
+      <div class="note">
+        <div class="bar">
+          <span class="more" title="Options">...</span>
+          <p class="date">${now.getDate()} - ${now.getMonth() + 1} - ${now.getFullYear()}</p>
+          <span class="account">${ACCOUNT_ICON}</span>
+        </div>
+        <div class="bodyWrap">
+          <div class="body" contenteditable="true"></div>
+          <button class="mic" title="Dictate">${MIC_ICON}</button>
+        </div>
+        <article class="menu">
+          <div class="themes"></div>
+          <button class="delete">Delete</button>
+          <button class="save">Save note locally</button>
+        </article>
+      </div>`;
+
+    const $ = (sel) => shadow.querySelector(sel);
+    const refs = {
+      host,
+      note: $(".note"),
+      bar: $(".bar"),
+      body: $(".body"),
+      menu: $(".menu"),
+      mic: $(".mic"),
+    };
+
+    Object.entries(STICKY_THEMES).forEach(([name, theme]) => {
+      const swatch = document.createElement("button");
+      swatch.title = name;
+      swatch.style.background = theme.swatch;
+      swatch.addEventListener("click", () => {
+        applyTheme(refs, name);
+        chrome.storage.local.set({ [THEME_KEY]: name });
+      });
+      $(".themes").append(swatch);
+    });
+
+    $(".more").addEventListener("mouseover", () => refs.menu.classList.add("open"));
+    refs.menu.addEventListener("mouseleave", () => refs.menu.classList.remove("open"));
+    $(".delete").addEventListener("click", deleteNote);
+    $(".save").addEventListener("click", saveNoteLocally);
+    refs.mic.addEventListener("click", dictate);
+    enableDragging(refs);
+
+    let saveTimer = null;
+    refs.body.addEventListener("input", () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveNote({ text: refs.body.innerText }), SAVE_DELAY_MS);
+    });
+
+    document.body.append(host);
+    return refs;
+  }
+
+  function applyTheme(refs, name) {
+    const theme = STICKY_THEMES[name] || STICKY_THEMES[DEFAULT_THEME];
+    [refs.body.style.backgroundColor, refs.body.style.color] = theme.body;
+    [refs.bar.style.backgroundColor, refs.bar.style.color] = theme.bar;
+  }
+
+  function enableDragging(refs) {
+    let offsetX = 0;
+    let offsetY = 0;
+    let dragging = false;
+    refs.bar.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const rect = refs.note.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+      dragging = true;
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      refs.note.style.right = "auto";
+      refs.note.style.left = `${e.clientX - offsetX + window.scrollX}px`;
+      refs.note.style.top = `${e.clientY - offsetY + window.scrollY}px`;
+    });
+    document.addEventListener("mouseup", () => {
+      dragging = false;
+    });
+  }
+
+  // Shows the text with clock times highlighted, built as DOM nodes (no HTML strings).
+  function renderText(body, text) {
+    const fragment = document.createDocumentFragment();
+    text.split("\n").forEach((line, i) => {
+      if (i > 0) fragment.append(document.createElement("br"));
+      InscribeTimes.splitByTimes(line).forEach(({ text: run, isTime }) => {
+        if (!isTime) return fragment.append(run);
+        const mark = document.createElement("span");
+        mark.className = "time";
+        mark.textContent = run;
+        fragment.append(mark);
+      });
+    });
+    body.replaceChildren(fragment);
+  }
+
+  async function showNote(note) {
+    if (!document.body) return; // e.g. raw XML or SVG documents
+    if (!ui) ui = buildUI();
+    if (!ui.host.isConnected) document.body.append(ui.host);
+    renderText(ui.body, note.text || "");
+    applyTheme(ui, await loadTheme());
+    requestAnimationFrame(() => ui.note.classList.add("open"));
+  }
+
+  async function deleteNote() {
+    if (!confirm("Are you sure you want to delete note?")) return;
+    await chrome.storage.local.remove(NOTE_KEY);
+    ui.note.classList.remove("open");
+    ui.menu.classList.remove("open");
+    ui.host.remove();
+  }
+
+  function download(text) {
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+    const link = document.createElement("a");
+    link.download = "inscribe_note.txt";
+    link.href = url;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  async function saveNoteLocally() {
+    let paid = false;
+    try {
+      paid = (await getUser()).paid;
+    } catch (err) {
+      // Offline or ExtPay unreachable: fall back to the free allowance.
+    }
+    if (paid) return download(ui.body.innerText);
+
+    const key = monthKey();
+    const { [key]: used = 0 } = await chrome.storage.local.get(key);
+    if (used >= FREE_SAVES_PER_MONTH) return openPaymentPage();
+    download(ui.body.innerText);
+    await chrome.storage.local.set({ [key]: used + 1 });
+  }
+
+  let recognising = false;
+  function dictate() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition || recognising) return;
+    const recognition = new Recognition();
+    recognition.interimResults = false;
+    recognition.addEventListener("result", (e) => {
+      const transcript = Array.from(e.results)
+        .map((result) => result[0].transcript)
+        .join("");
+      ui.body.append(`${transcript} `);
+      saveNote({ text: ui.body.innerText });
+    });
+    recognition.addEventListener("end", () => {
+      recognising = false;
+    });
+    recognising = true;
     recognition.start();
   }
-  speech = false;
-});
-// End of FAB Code
 
-noteContent.addEventListener("change", (e) => {
-  getTimePhrasesFromNote();
-});
-// console.log(getTimePhrasesFromNote());
+  // ---------- startup ----------
 
-function getTimePhrasesFromNote() {
-  const noteText = noteContent.innerText;
-  const timePhrases = noteText.match(/(\d{1,2}(:\d{2})?\s?[ap]m)/gi);
-  const fTimePhrases = formatTimeStrings(timePhrases);
-  return fTimePhrases;
-}
-
-function printAlertsWhenTimeIsReachedOrPassed() {
-  const timePhrases = getTimePhrasesFromNote();
-  if (!timePhrases) {
-    return;
-  }
-
-  const currentTime = new Date();
-  const currentTimeString = currentTime.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action !== "runContentScript") return false;
+    loadNote()
+      .then((note) => {
+        const next = { text: note ? note.text : "", visible: true };
+        return saveNote(next).then(() => showNote(next));
+      })
+      .then(() => sendResponse({ msg: "Done" }));
+    return true;
   });
-  timePhrases.forEach((timePhrase) => {
-    if (timePhrase == currentTimeString) {
-      alert("Time is up!");
-    }
-  });
-}
 
-function checkTimePhrase() {
-  setInterval(printAlertsWhenTimeIsReachedOrPassed, 10000);
-}
-
-function highlightTimePhrases() {
-  const timePhrases = getTimePhrasesFromNote();
-  if (!timePhrases) {
-    return;
-  }
-
-  const noteText = noteContent.innerText;
-  const lines = noteText.split("\n");
-  // console.log(lines);
-  const highlightedLines = lines.map((line) =>
-    line.replace(
-      /(\d{1,2}(:\d{2})?\s?[ap]m)/gi,
-      "<span style='background-color: yellow'>$1</span>"
-    )
-  );
-
-  noteContent.innerHTML = highlightedLines.join("<br>");
-}
-checkTimePhrase();
-highlightTimePhrases();
-// // // Setting alarm on the sticky note
-
-function formatTimeString(timeString) {
-  const match = timeString.match(/(\d{1,2})(:\d{2})?\s?([ap]m)/i);
-  if (!match) return timeString;
-
-  let [_, hour, minutes, period] = match;
-  hour = parseInt(hour, 10);
-  minutes = minutes ? minutes : ":00";
-  period = period.toUpperCase();
-
-  if (hour < 10) {
-    hour = `0${hour}`;
-  }
-
-  return `${hour}${minutes} ${period}`;
-}
-
-function formatTimeStrings(timeStrings) {
-  return timeStrings.map(formatTimeString);
-}
-
-// Example usage:
-const times = ["7pm", "8AM", "10:30 pm", "5:45am"];
-const formattedTimes = formatTimeStrings(times);
-console.log(formattedTimes); // ["07:00 PM", "08:00 AM", "10:30 PM", "05:45 AM"]
+  migrateFromPageStorage()
+    .catch((err) => console.warn("Inscribe: sticky-note migration failed.", err))
+    .then(loadNote)
+    .then((note) => {
+      if (note && note.visible) showNote(note);
+    });
+})();

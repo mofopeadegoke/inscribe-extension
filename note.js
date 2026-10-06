@@ -34,48 +34,43 @@ const popupBox = document.querySelector(".popup-box"),
 const trialBtn = document.querySelector(".trial");
 var totalNotes = [],
   selectedTheme;
-localStorage.getItem("theme")
-  ? (selectedTheme = localStorage.getItem("theme"))
-  : localStorage.setItem("theme", "yellowMode");
+function saveNotes() {
+  return InscribeStorage.set({ myNotes: totalNotes });
+}
+// Static markup only; note fields are filled in with textContent or
+// sanitized HTML so a title or body can never break or inject markup.
+const noteTemplate = `
+  <h3></h3>
+  <span class="noteBody"></span>
+  <p class="copiedToClipboardAlert">Copied to clipboard</p>
+  <div class="settings">
+    <p class="noteDate"></p>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="showContentBtn">
+      <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+    </svg>
+    <ul class="content">
+      <li class="updateBtn"><img src="./images/pencil.svg" alt="A pencil Logo"> Edit</li>
+      <li class="copyBtn"><img src="./images/clipboard.svg" alt="A clipboard logo"> Copy Content</li>
+      <li class="deleteNoteBtn"><img src="./images/trash3.svg" alt="A trash can logo"> Delete</li>
+      <li class="saveNoteLocallyBtn"><img src="./images/download.svg" alt="The download logo"> Save this note locally</li>
+    </ul>
+  </div>`;
+
 function renderNotes() {
-  totalNotes = JSON.parse(localStorage.getItem("myNotes"));
-  let notes = "";
-  if (totalNotes) {
-    totalNotes.forEach((note, index) => {
-      notes += `
-      <article class="noteDiv">
-        <h3>${note.title}</h3>
-        <span>${note.text}</span>
-        <p class="copiedToClipboardAlert" data-id=${index}>Copied to clipboard</p>
-        <div class="settings">
-        <p>${note.date}</p>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" data-id=${index} class='showContentBtn'>
-        <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-        </svg>
-        <ul class="content">
-        <li class='updateBtn' data-title='${note.title}' data-text='${note.text}' data-id=${index}>
-        <img src="./images/pencil.svg" alt="A pencil Logo">
-        Edit
-        </li>
-        <li class='copyBtn' data-text='${note.text}' data-id=${index}>
-        <img src="./images/clipboard.svg" alt="A pencil Logo">
-        Copy Content
-        </li>
-        <li class='deleteNoteBtn' data-id=${index}>
-        <img src="./images/trash3.svg" alt="A trash can logo">
-        Delete
-        </li>
-        <li class='saveNoteLocallyBtn' data-id=${index} data-title='${note.title}' data-text='${note.text}'>
-        <img src="./images/download.svg" alt="The download logo">
-        Save this note locally
-        </li>
-        </ul>
-        </div>
-      </article>`;
-    });
-  }
+  const articles = totalNotes.map((note, index) => {
+    const article = document.createElement("article");
+    article.className = "noteDiv";
+    article.innerHTML = noteTemplate;
+    article.querySelector("h3").textContent = note.title;
+    article.querySelector(".noteBody").innerHTML = sanitizeNoteHtml(note.text);
+    article.querySelector(".noteDate").textContent = note.date;
+    article
+      .querySelectorAll(".copiedToClipboardAlert, .showContentBtn, li")
+      .forEach((el) => el.setAttribute("data-id", index));
+    return article;
+  });
   if (notesContainer) {
-    notesContainer.innerHTML = notes;
+    notesContainer.replaceChildren(...articles);
   }
   if (selectedTheme == "yellowMode") {
     if (document.querySelectorAll(".noteDiv")) {
@@ -156,7 +151,14 @@ function renderNotes() {
     }
   }
 }
-window.onload = () => {
+window.onload = async () => {
+  await InscribeStorage.ready();
+  const { myNotes, popupTheme } = await InscribeStorage.get([
+    "myNotes",
+    "popupTheme",
+  ]);
+  totalNotes = myNotes || [];
+  selectedTheme = popupTheme || "yellowMode";
   renderNotes();
 
   deleteNoteBtns = document.querySelectorAll(".deleteNoteBtn");
@@ -166,13 +168,12 @@ window.onload = () => {
   saveNoteLocallyBtns = document.querySelectorAll(".saveNoteLocallyBtn");
   alertBox = document.querySelectorAll(".copiedToClipboardAlert");
   deleteNoteBtns.forEach((elem) => {
-    elem.addEventListener("click", () => {
+    elem.addEventListener("click", async () => {
       let confirmDel = confirm("Are you sure you want to delete note?");
       if (!confirmDel) return;
       noteId = elem.getAttribute("data-id");
       totalNotes.splice(noteId, 1);
-      localStorage.setItem("myNotes", JSON.stringify(totalNotes));
-      renderNotes();
+      await saveNotes();
       window.location.reload();
     });
   });
@@ -183,10 +184,8 @@ window.onload = () => {
   });
   updateBtns.forEach((elem) => {
     elem.addEventListener("click", () => {
-      id = elem.getAttribute("data-id");
-      title = elem.getAttribute("data-title");
-      desc = elem.getAttribute("data-text");
-      updateId = id;
+      updateId = elem.getAttribute("data-id");
+      const { title, text: desc } = totalNotes[updateId];
       popupBox.classList.add("see");
       let textModified = desc;
       textModified = textModified.replace(/\t/g, "  ");
@@ -211,8 +210,7 @@ window.onload = () => {
             user.paid ||
             (user.trialStartedAt && now - user.trialStartedAt < sevenDays)
           ) {
-            title = elem.getAttribute("data-title");
-            desc = elem.getAttribute("data-text");
+            const { title, text: desc } = totalNotes[elem.getAttribute("data-id")];
             saveNoteLocallyPopupBox.classList.add("see");
             saveNoteLocallyTitle.value = title;
             saveNoteLocallyNoteContentEl.value = desc;
@@ -235,9 +233,11 @@ window.onload = () => {
   copyBtns.forEach((elem) => {
     elem.addEventListener("click", () => {
       copyId = elem.getAttribute("data-id");
-      text = elem.getAttribute("data-text");
       const parser = new DOMParser();
-      const parserhtml = parser.parseFromString(text, "text/html");
+      const parserhtml = parser.parseFromString(
+        sanitizeNoteHtml(totalNotes[copyId].text),
+        "text/html"
+      );
       const textContent = parserhtml.body.innerText;
       navigator.clipboard.writeText(textContent);
       // elem.parentElement.previousElementSibling.click();
@@ -307,10 +307,8 @@ updateNoteBtn.addEventListener("click", (e) => {
     date: `${month} ${day}, ${year}`,
   };
   totalNotes[updateId] = note;
-  localStorage.setItem("myNotes", JSON.stringify(totalNotes));
   closePopupBtn.click();
-  renderNotes();
-  window.onload();
+  saveNotes().then(() => window.onload());
 });
 closePopupBtn.addEventListener("click", (e) => {
   titleInputEl.value = "";

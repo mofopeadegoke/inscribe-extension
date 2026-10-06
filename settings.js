@@ -1,143 +1,77 @@
 const extpaySettings = ExtPay("inscribe"),
   themeBtns = document.querySelectorAll(".theme-option");
-console.log(themeBtns);
-let selectedThemeUI,
-  selectedThemeSettings,
-  subscriptionTextEl = document.querySelector(".subscriptionText"),
+let subscriptionTextEl = document.querySelector(".subscriptionText"),
   viewSubPlanEl = document.querySelector(".viewSubPlan");
-selectedThemeSettings = localStorage.getItem("theme");
-if (selectedThemeSettings == "yellowMode") {
-  document.querySelector(".one").classList.add("selected");
-} else if (selectedThemeSettings == "blueMode") {
-  document.querySelector(".two").classList.add("selected");
-} else if (selectedThemeSettings == "purpleMode") {
-  document.querySelector(".three").classList.add("selected");
-} else if (selectedThemeSettings == "greenMode") {
-  document.querySelector(".four").classList.add("selected");
-} else if (selectedThemeSettings == "redMode") {
-  document.querySelector(".five").classList.add("selected");
-} else if (selectedThemeSettings == "pinkMode") {
-  document.querySelector(".six").classList.add("selected");
-} else if (selectedThemeSettings == "darkMode") {
-  document.querySelector(".seven").classList.add("selected");
-}
-if (themeBtns) {
-  themeBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (document.querySelector(".selected")) {
-        document.querySelector(".selected").classList.remove("selected");
-        btn.classList.add("selected");
-        selectedThemeUI = btn.className;
-        console.log(selectedThemeUI);
-        if (selectedThemeUI == "theme-option one selected") {
-          localStorage.setItem("theme", "yellowMode");
-        } else if (selectedThemeUI == "theme-option two selected") {
-          localStorage.setItem("theme", "blueMode");
-        } else if (selectedThemeUI == "theme-option three selected") {
-          localStorage.setItem("theme", "purpleMode");
-        } else if (selectedThemeUI == "theme-option four selected") {
-          localStorage.setItem("theme", "greenMode");
-        } else if (selectedThemeUI == "theme-option five selected") {
-          localStorage.setItem("theme", "redMode");
-        } else if (selectedThemeUI == "theme-option six selected") {
-          localStorage.setItem("theme", "pinkMode");
-        } else if (selectedThemeUI == "theme-option seven selected") {
-          localStorage.setItem("theme", "darkMode");
-        }
-        selectedTheme = localStorage.getItem("theme");
-        if (selectedTheme == "yellowMode") {
-          document.querySelectorAll(".btn").forEach((elem) => {
-            elem.style.background = "rgb(245, 204, 0)";
-            elem.style.color = "black";
-          });
-        } else if (selectedTheme == "blueMode") {
-          document.querySelectorAll(".btn").forEach((elem) => {
-            elem.style.background = "#3486eb";
-            elem.style.color = "white";
-          });
-        } else if (selectedTheme == "purpleMode") {
-          document.querySelectorAll(".btn").forEach((elem) => {
-            elem.style.background = "purple";
-            elem.style.color = "white";
-          });
-        } else if (selectedTheme == "greenMode") {
-          document.querySelectorAll(".btn").forEach((elem) => {
-            elem.style.background = "green";
-            elem.style.color = "white";
-          });
-        } else if (selectedTheme == "redMode") {
-          document.querySelectorAll(".btn").forEach((elem) => {
-            elem.style.background = "darkred";
-            elem.style.color = "white";
-          });
-        } else if (selectedTheme == "pinkMode") {
-          document.querySelectorAll(".btn").forEach((elem) => {
-            elem.style.background = "pink";
-            elem.style.color = "black";
-          });
-        } else if (selectedTheme == "darkMode") {
-          document.querySelectorAll(".btn").forEach((elem) => {
-            elem.style.background = "#333";
-            elem.style.color = "white";
-          });
-        }
-      }
-    });
+
+// theme-option class -> stored theme name
+const themeByOption = {
+  one: "yellowMode",
+  two: "blueMode",
+  three: "purpleMode",
+  four: "greenMode",
+  five: "redMode",
+  six: "pinkMode",
+  seven: "darkMode",
+};
+const buttonColors = {
+  yellowMode: ["rgb(245, 204, 0)", "black"],
+  blueMode: ["#3486eb", "white"],
+  purpleMode: ["purple", "white"],
+  greenMode: ["green", "white"],
+  redMode: ["darkred", "white"],
+  pinkMode: ["pink", "black"],
+  darkMode: ["#333", "white"],
+};
+
+function applySettingsTheme(theme) {
+  const colors = buttonColors[theme];
+  if (!colors) return;
+  document.querySelectorAll(".btn").forEach((elem) => {
+    elem.style.background = colors[0];
+    elem.style.color = colors[1];
   });
 }
-selectedTheme = localStorage.getItem("theme");
-if (selectedTheme == "yellowMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "rgb(245, 204, 0)";
+
+themeBtns.forEach((btn) => {
+  const option = Object.keys(themeByOption).find((cls) =>
+    btn.classList.contains(cls)
+  );
+  btn.addEventListener("click", () => {
+    const current = document.querySelector(".theme-option.selected");
+    if (current) current.classList.remove("selected");
+    btn.classList.add("selected");
+    InscribeStorage.set({ popupTheme: themeByOption[option] });
+    applySettingsTheme(themeByOption[option]);
   });
-} else if (selectedTheme == "blueMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "#3486eb";
-    elem.style.color = "white";
+});
+
+InscribeStorage.ready()
+  .then(() => InscribeStorage.get("popupTheme"))
+  .then(({ popupTheme }) => {
+    const option = Object.keys(themeByOption).find(
+      (cls) => themeByOption[cls] === popupTheme
+    );
+    const btn = option && document.querySelector(`.theme-option.${option}`);
+    if (btn) btn.classList.add("selected");
+    applySettingsTheme(popupTheme);
   });
-} else if (selectedTheme == "purpleMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "purple";
-    elem.style.color = "white";
-  });
-} else if (selectedTheme == "greenMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "green";
-    elem.style.color = "white";
-  });
-} else if (selectedTheme == "redMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "darkred";
-    elem.style.color = "white";
-  });
-} else if (selectedTheme == "pinkMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "pink";
-    elem.style.color = "black";
-  });
-} else if (selectedTheme == "darkMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "#333";
-    elem.style.color = "white";
-  });
-}
-extpaySettings
-  .getUser()
-  .then((user) => {
-    if (user.paid) {
-      subscriptionTextEl.textContent =
-        "You are currently using Inscribe Premium";
-    } else {
-      subscriptionTextEl.textContent =
-        " You are currently using the free version of Inscribe";
-    }
-  })
-  .catch((err) => {
-    if (subscriptionTextEl) {
-      subscriptionTextEl.textContent =
-        " An error occured! Check your internet connection";
-    }
-  });
-if (viewSubPlanEl) {
-  viewSubPlanEl.addEventListener("click", extpaySettings.openPaymentPage);
-}
+extpaySettings
+  .getUser()
+  .then((user) => {
+    if (user.paid) {
+      subscriptionTextEl.textContent =
+        "You are currently using Inscribe Premium";
+    } else {
+      subscriptionTextEl.textContent =
+        " You are currently using the free version of Inscribe";
+    }
+  })
+  .catch((err) => {
+    if (subscriptionTextEl) {
+      subscriptionTextEl.textContent =
+        " An error occured! Check your internet connection";
+    }
+  });
+if (viewSubPlanEl) {
+  viewSubPlanEl.addEventListener("click", extpaySettings.openPaymentPage);
+}
