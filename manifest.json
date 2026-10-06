@@ -30,7 +30,7 @@
         },
         {
             "matches": ["<all_urls>"],
-            "js": ["shared/timePhrases.js", "shared/premium.js", "contentOwn.js"]
+            "js": ["shared/themes.js", "shared/timePhrases.js", "shared/premium.js", "contentOwn.js"]
         }
     ],
     "web_accessible_resources": [

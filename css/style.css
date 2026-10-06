@@ -455,3 +455,15 @@ footer li {
 .fileName {
     padding: 4px;
 }
+
+/* Popup theme (set by shared/themes.js) */
+html[data-theme] .btn {
+    background: var(--accent);
+    color: var(--on-accent);
+}
+html[data-theme] .micImgReal {
+    fill: var(--on-accent);
+}
+html[data-theme] #size-slider {
+    accent-color: var(--accent);
+}

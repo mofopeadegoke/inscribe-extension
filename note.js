@@ -22,7 +22,6 @@ const notesContainer = document.querySelector(".notes"),
   trialBtn = document.querySelector(".trial");
 
 let totalNotes = [],
-  selectedTheme,
   updateId = null;
 
 function saveNotes() {
@@ -48,25 +47,6 @@ const noteTemplate = `
     </ul>
   </div>`;
 
-const themeColors = {
-  yellowMode: ["rgb(245, 204, 0)", "black"],
-  blueMode: ["#3486eb", "white"],
-  purpleMode: ["purple", "white"],
-  greenMode: ["green", "white"],
-  redMode: ["darkred", "white"],
-  pinkMode: ["pink", "black"],
-  darkMode: ["#333", "white"],
-};
-
-function applyNoteTheme() {
-  const colors = themeColors[selectedTheme];
-  if (!colors) return;
-  document.querySelectorAll(".noteDiv, button").forEach((elem) => {
-    elem.style.background = colors[0];
-    elem.style.color = colors[1];
-  });
-}
-
 function renderNotes() {
   const articles = totalNotes.map((note, index) => {
     const article = document.createElement("article");
@@ -79,7 +59,6 @@ function renderNotes() {
     return article;
   });
   notesContainer.replaceChildren(...articles);
-  applyNoteTheme();
 }
 
 // ---------- note actions (one delegated handler for the whole list) ----------
@@ -220,6 +199,6 @@ trialBtn.addEventListener("click", () => {
   await InscribeStorage.ready();
   const { myNotes, popupTheme } = await InscribeStorage.get(["myNotes", "popupTheme"]);
   totalNotes = myNotes || [];
-  selectedTheme = popupTheme || "yellowMode";
+  InscribeThemes.applyPopupTheme(popupTheme);
   renderNotes();
 })();

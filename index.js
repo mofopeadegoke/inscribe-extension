@@ -19,69 +19,17 @@ let sizeSlider = document.querySelector("#size-slider"),
 let isDrawing = false;
 let selectedTool = "brush",
   snapshot,
-  brushWidth = 5,
-  selectedTheme,
-  micImgElement = document.querySelector(".micImgReal");
+  brushWidth = 5;
 // console.log(micImgElement);
 
 InscribeStorage.ready()
   .then(() => InscribeStorage.get("popupTheme"))
   .then(({ popupTheme }) => {
-    selectedTheme = popupTheme || "yellowMode";
-    if (!popupTheme) InscribeStorage.set({ popupTheme: selectedTheme });
-    applyTheme();
+    InscribeThemes.applyPopupTheme(popupTheme);
+    if (!popupTheme) {
+      InscribeStorage.set({ popupTheme: InscribeThemes.DEFAULT_POPUP_THEME });
+    }
   });
-
-function applyTheme() {
-  if (selectedTheme == "yellowMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "rgb(245, 204, 0)";
-    });
-    micImgElement.style.fill = "black";
-    sizeSlider.style.accentColor = "rgb(245, 204, 0)";
-  } else if (selectedTheme == "blueMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "rgb(245, 204, 0)";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "#3486eb";
-  } else if (selectedTheme == "purpleMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "purple";
-      elem.style.color = "white";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "purple";
-  } else if (selectedTheme == "greenMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "green";
-      elem.style.color = "white";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "green";
-  } else if (selectedTheme == "redMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "darkred";
-      elem.style.color = "white";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "darkRed";
-  } else if (selectedTheme == "pinkMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "pink";
-      elem.style.color = "black";
-    });
-    micImgElement.style.fill = "black";
-    sizeSlider.style.accentColor = "pink";
-  } else if (selectedTheme == "darkMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "#333";
-      elem.style.color = "white";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "#333";
-  }
-}
 
 const strokeStart = {
   x: undefined,

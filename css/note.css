@@ -368,3 +368,10 @@ form .row label {
     color: black;
     outline: none;
 }
+
+/* Popup theme (set by shared/themes.js) */
+html[data-theme] .noteDiv,
+html[data-theme] button {
+    background: var(--accent);
+    color: var(--on-accent);
+}

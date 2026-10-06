@@ -8,16 +8,7 @@
   const THEME_KEY = "stickyTheme";
   const SAVE_DELAY_MS = 400;
 
-  const STICKY_THEMES = {
-    christmasMode: { swatch: "#c54245", body: ["#c54245", "#ECECEE"], bar: ["#B12E31", "#ECECEE"] },
-    winterMode: { swatch: "#89ABE3FF", body: ["#89ABE3FF", "#FCF6F5FF"], bar: ["#6C8DB7FF", "#FCF6F5FF"] },
-    yellowMode: { swatch: "#F2AA4CFF", body: ["#F2AA4CFF", "#101820FF"], bar: ["#D1883AFF", "#101820FF"] },
-    islandWhiteMode: { swatch: "#2BAE66FF", body: ["#2BAE66FF", "#FCF6F5FF"], bar: ["#1D8E4DFF", "#FCF6F5FF"] },
-    mintMode: { swatch: "#ADEFD1FF", body: ["#222", "#ADEFD1FF"], bar: ["#111", "#ADEFD1FF"] },
-    blackMode: { swatch: "#101820FF", body: ["#101820FF", "#ddd"], bar: ["#080C14FF", "#ddd"] },
-    whiteMode: { swatch: "#dddccc", body: ["#f5f5f5", "black"], bar: ["#ccc", "black"] },
-  };
-  const DEFAULT_THEME = "whiteMode";
+  const { STICKY_THEMES, DEFAULT_STICKY_THEME: DEFAULT_THEME } = InscribeThemes;
 
   const ACCOUNT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" height="16" width="14" viewBox="0 0 448 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path fill="currentColor" d="M304 128a80 80 0 1 0 -160 0 80 80 0 1 0 160 0zM96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM49.3 464H398.7c-8.9-63.3-63.3-112-129-112H178.3c-65.7 0-120.1 48.7-129 112zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3z"/></svg>`;
   const MIC_ICON = `<svg xmlns="http://www.w3.org/2000/svg" height="17.6" width="13.2" viewBox="0 0 384 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2023 Fonticons, Inc.--><path fill="#333333" d="M192 0C139 0 96 43 96 96V256c0 53 43 96 96 96s96-43 96-96V96c0-53-43-96-96-96zM64 216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 89.1 66.2 162.7 152 174.4V464H120c-13.3 0-24 10.7-24 24s10.7 24 24 24h72 72c13.3 0 24-10.7 24-24s-10.7-24-24-24H216V430.4c85.8-11.7 152-85.3 152-174.4V216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 70.7-57.3 128-128 128s-128-57.3-128-128V216z"/></svg>`;
