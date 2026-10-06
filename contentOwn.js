@@ -263,7 +263,6 @@
     renderText(ui.body, note.text || "");
     applyTheme(ui, await loadTheme());
     requestAnimationFrame(() => ui.note.classList.add("open"));
-    startAlarmChecks();
   }
 
   async function deleteNote() {
@@ -317,25 +316,6 @@
     });
     recognising = true;
     recognition.start();
-  }
-
-  // ---------- alarms (moving to the background worker next) ----------
-
-  let alarmTimer = null;
-  const alerted = new Set();
-  function startAlarmChecks() {
-    if (alarmTimer) return;
-    alarmTimer = setInterval(() => {
-      if (!ui || !ui.host.isConnected) return;
-      const now = new Date();
-      InscribeTimes.extractTimes(ui.body.innerText).forEach(({ hour, minute, label }) => {
-        const id = `${now.toDateString()} ${label}`;
-        if (hour === now.getHours() && minute === now.getMinutes() && !alerted.has(id)) {
-          alerted.add(id);
-          alert("Time is up!");
-        }
-      });
-    }, 10000);
   }
 
   // ---------- startup ----------
