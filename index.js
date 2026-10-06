@@ -20,7 +20,6 @@ let isDrawing = false;
 let selectedTool = "brush",
   snapshot,
   brushWidth = 5;
-// console.log(micImgElement);
 
 InscribeStorage.ready()
   .then(() => InscribeStorage.get("popupTheme"))
@@ -198,13 +197,6 @@ clearCanvas.addEventListener("click", () => {
   pushHistory(); // clearing can be undone
 });
 
-// saveImage.addEventListener("click", () => {
-//   const link = document.createElement("a");
-//   link.download = `${Date.now()}.jpg`;
-//   link.href = canvas.toDataURL();
-//   link.click();
-// });
-
 let show = false;
 
 function disappear() {
@@ -213,14 +205,6 @@ function disappear() {
   }
 }
 
-// optionsBtn.addEventListener("mouseover", () => {
-//   optionUI.style.display = "block";
-//   show = true;
-// });
-// optionsBtn.addEventListener("mouseleave", () => {
-//   setTimeout(disappear, 1000);
-//   show = false;
-// });
 optionUI.addEventListener("mouseover", () => {
   optionUI.style.display = "block";
   show = true;
@@ -234,10 +218,9 @@ fileExtensionsInputBox.addEventListener("change", () => {
   let selectedOption =
     fileExtensionsInputBox.options[fileExtensionsInputBox.selectedIndex].text;
   saveAsFileBtn.innerText = `Save As ${selectedOption.split(" ")[0]} File`;
-  console.log(selectedOption.split(" ")[0]);
 });
 
-// Saving Notes in storage (as sanitized HTML, so formatting is kept)
+// Saving notes to storage as sanitized HTML, so formatting is kept
 saveNotesBtn.addEventListener("click", async () => {
   if (fileNameInputBox.value) {
     await InscribeStorage.ready();
@@ -256,7 +239,7 @@ saveNotesBtn.addEventListener("click", async () => {
   }
 });
 
-// Clear Textarea Buttonn
+// Clear Textarea Button
 const clearAreaBtn = document.querySelector(".clearTextarea");
 clearAreaBtn.addEventListener("click", () => {
   textAreaText.replaceChildren();
@@ -270,7 +253,7 @@ const popupBox = document.querySelector(".popup-box"),
 const closePopupBtn = document.querySelector(".Upgradecontent header img"),
   payBtn = document.querySelector(".pay"),
   trialBtn = document.querySelector(".trial");
-options = document.querySelectorAll("footer li");
+const options = document.querySelectorAll("footer li");
 closePopupBtn.addEventListener("click", () => {
   popupBox.classList.remove("see");
 });
@@ -334,59 +317,14 @@ payBtn.addEventListener("click", () => {
 trialBtn.addEventListener("click", () => {
   extpay.openTrialPage();
 });
-// window.addEventListener("online", () => {
-//   payBtn.addEventListener("click", extpay.openPaymentPage);
-// });
-// window.addEventListener("offline", () => {
-//   payBtn.addEventListener("click", () => {
-//     errorBox.classList.add("see");
-//   });
-// });
 
 // Speech to text
 const micBtn = document.querySelector(".micImg");
-// var a,
-//   iterator = 0,
-//   isRecording = false;
-// micBtn.addEventListener("click", () => {
-//   micBtn.classList.toggle("on");
-//   isRecording = !isRecording;
-//   if (micBtn.className == "micImg on" && isRecording) {
-//     pasteBtn.classList.add("off");
-//     chrome.tabs.query({ currentWindow: true, active: true }, (tab) => {
-//       chrome.tabs.sendMessage(
-//         tab[0].id,
-//         {
-//           message: "Start Recording",
-//         },
-//         function (response) {
-//           if (response) {
-//             a = response.value;
-//           }
-//           console.log(response);
-//         }
-//       );
-//     });
-//   }
-//   if (!isRecording) {
-//     micBtn.click();
-//     micBtn.click();
-//     setTimeout(clickable, 1000);
-//   }
-//   function clickable() {
-//     pasteBtn.classList.remove("off");
-//   }
-// });
-// pasteBtn.addEventListener("click", () => {
-//   textAreaText.value = "";
-//   textAreaText.value += a;
-//   console.log(a);
-// });
 micBtn.addEventListener("click", () => {
   chrome.tabs.create({ url: "speech.html" });
 });
 
-// Auto Saving (debounced; keeps formatting)
+// Auto saving: debounced, keeps formatting
 let autosaveTimer = null;
 textAreaText.addEventListener("input", () => {
   clearTimeout(autosaveTimer);
@@ -403,13 +341,11 @@ moreFormatting.addEventListener("click", () => {
 
 // Rich Formatting Tools
 let optionButtons = document.querySelectorAll(".option-button");
-let advanvedOptionButtons = document.querySelectorAll(".adv-option-button");
 let linkButton = document.getElementById("createLink");
 let alignButtons = document.querySelectorAll(".align");
 let spacingButtons = document.querySelectorAll(".spacing");
 let formatButtons = document.querySelectorAll(".format");
 let scriptButtons = document.querySelectorAll(".script");
-let fontSizeSelect = document.querySelector(".formatSelects .two");
 const initializer = () => {
   highlighter(alignButtons, true);
   highlighter(spacingButtons, true);
@@ -445,10 +381,6 @@ optionButtons.forEach((elem) => {
   });
 });
 linkButton.addEventListener("click", InscribeFormatting.createLink);
-// fontSizeSelect.addEventListener("change", () => {
-//   formatDoc("fontSize", this.value);
-//   this.selectedIndex = 0;
-// });
 textAreaText.addEventListener("mouseenter", () => {
   const a = document.querySelectorAll("a");
   a.forEach((item) => {
