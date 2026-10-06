@@ -17,7 +17,7 @@ let sizeSlider = document.querySelector("#size-slider"),
   fileExtensionsInputBox = document.querySelector("#fileExtensions"),
   saveNotesBtn = document.querySelector(".saveNoteBtn");
 let isDrawing = false;
-let selectedTool,
+let selectedTool = "brush",
   snapshot,
   brushWidth = 5,
   selectedTheme,
@@ -82,21 +82,6 @@ function applyTheme() {
     sizeSlider.style.accentColor = "#333";
   }
 }
-extpay
-  .getUser()
-  .then((user) => {
-    const now = new Date();
-    const sevenDays = 1000 * 60 * 60 * 24 * 7; // seven days in milliseconds
-    if (
-      user.paid ||
-      (user.trialStartedAt && now - user.trialStartedAt < sevenDays) // Checking if the user's trial still works
-    ) {
-      selectedTool = "brush";
-    } else {
-      selectedTool = "eraser";
-    }
-  })
-  .catch((err) => {});
 
 const strokeStart = {
   x: undefined,
@@ -345,24 +330,18 @@ closeErrorPopupBtn.addEventListener("click", () => {
   errorBox.classList.remove("see");
 });
 
-// Replace 'sample-extension' with the id of the extension you
-// registered on ExtensionPay.com to test payments. You may need to
-// uninstall and reinstall the extension to make it work.
-// Don't forget to change the ID in background.js too!
-
-// document
-//   .querySelector("button")
-//   .addEventListener("click", extpay.openPaymentPage);
+// Premium features: when payment status can't be fetched (offline, ExtPay
+// unreachable) the buttons explain that instead of silently doing nothing.
+function gateFeatures(popup) {
+  [saveImage, optionsBtn, saveAsFileBtn].forEach((btn) =>
+    btn.addEventListener("click", () => popup.classList.add("see"))
+  );
+}
 
 extpay
   .getUser()
   .then((user) => {
-    const now = new Date();
-    const sevenDays = 1000 * 60 * 60 * 24 * 7; // seven days in milliseconds
-    if (
-      user.paid ||
-      (user.trialStartedAt && now - user.trialStartedAt < sevenDays)
-    ) {
+    if (InscribePremium.isPremium(user)) {
       saveAsFileBtn.addEventListener("click", () => {
         InscribeDownload.exportNote(fileExtensionsInputBox.value, {
           title: fileNameInputBox.value,
@@ -392,22 +371,10 @@ extpay
         elem.style.pointerEvents = "all";
       });
     } else {
-      saveImage.addEventListener("click", () => {
-        popupBox.classList.add("see");
-      });
-      optionsBtn.addEventListener("click", () => {
-        popupBox.classList.add("see");
-      });
-      saveAsFileBtn.addEventListener("click", () => {
-        popupBox.classList.add("see");
-      });
+      gateFeatures(popupBox);
     }
   })
-  .catch((err) => {
-    // document.querySelector("p").innerHTML =
-    //   "Error fetching data :( Check that your ExtensionPay id is correct and you're connected to the internet";
-  });
-// extpay.onPaid(function() { console.log('popup paid')});
+  .catch(() => gateFeatures(errorBox));
 payBtn.addEventListener("click", () => {
   if (navigator.onLine) {
     extpay.openPaymentPage();

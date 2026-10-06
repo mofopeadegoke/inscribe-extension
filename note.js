@@ -117,12 +117,7 @@ const noteActions = {
     extpay
       .getUser()
       .then((user) => {
-        const now = new Date();
-        const sevenDays = 1000 * 60 * 60 * 24 * 7; // seven days in milliseconds
-        if (
-          user.paid ||
-          (user.trialStartedAt && now - user.trialStartedAt < sevenDays)
-        ) {
+        if (InscribePremium.isPremium(user)) {
           const { title, text } = totalNotes[id];
           saveNoteLocallyTitle.value = title;
           saveNoteLocallyContent.innerHTML = sanitizeNoteHtml(text);

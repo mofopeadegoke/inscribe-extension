@@ -55,23 +55,26 @@ InscribeStorage.ready()
     if (btn) btn.classList.add("selected");
     applySettingsTheme(popupTheme);
   });
-extpaySettings
-  .getUser()
-  .then((user) => {
-    if (user.paid) {
-      subscriptionTextEl.textContent =
-        "You are currently using Inscribe Premium";
-    } else {
-      subscriptionTextEl.textContent =
-        " You are currently using the free version of Inscribe";
-    }
-  })
-  .catch((err) => {
-    if (subscriptionTextEl) {
-      subscriptionTextEl.textContent =
-        " An error occured! Check your internet connection";
-    }
-  });
-if (viewSubPlanEl) {
-  viewSubPlanEl.addEventListener("click", extpaySettings.openPaymentPage);
-}
+extpaySettings
+  .getUser()
+  .then((user) => {
+    if (user.paid) {
+      subscriptionTextEl.textContent =
+        "You are currently using Inscribe Premium";
+    } else if (InscribePremium.isPremium(user)) {
+      subscriptionTextEl.textContent =
+        "You are currently on the Inscribe Premium free trial";
+    } else {
+      subscriptionTextEl.textContent =
+        " You are currently using the free version of Inscribe";
+    }
+  })
+  .catch((err) => {
+    if (subscriptionTextEl) {
+      subscriptionTextEl.textContent =
+        " An error occured! Check your internet connection";
+    }
+  });
+if (viewSubPlanEl) {
+  viewSubPlanEl.addEventListener("click", extpaySettings.openPaymentPage);
+}

@@ -6,7 +6,6 @@
 (() => {
   const NOTE_KEY = `sticky:${location.origin}`;
   const THEME_KEY = "stickyTheme";
-  const FREE_SAVES_PER_MONTH = 10;
   const SAVE_DELAY_MS = 400;
 
   const STICKY_THEMES = {
@@ -140,10 +139,6 @@
 
   function openPaymentPage() {
     chrome.runtime.sendMessage({ type: "openPaymentPage" });
-  }
-
-  function monthKey(date = new Date()) {
-    return `freeStickySaves:${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
   }
 
   // ---------- UI ----------
@@ -283,17 +278,17 @@
   }
 
   async function saveNoteLocally() {
-    let paid = false;
+    let premium = false;
     try {
-      paid = (await getUser()).paid;
+      premium = InscribePremium.isPremium(await getUser());
     } catch (err) {
       // Offline or ExtPay unreachable: fall back to the free allowance.
     }
-    if (paid) return download(ui.body.innerText);
+    if (premium) return download(ui.body.innerText);
 
-    const key = monthKey();
+    const key = InscribePremium.freeSavesKey();
     const { [key]: used = 0 } = await chrome.storage.local.get(key);
-    if (used >= FREE_SAVES_PER_MONTH) return openPaymentPage();
+    if (!InscribePremium.hasFreeSavesLeft(used)) return openPaymentPage();
     download(ui.body.innerText);
     await chrome.storage.local.set({ [key]: used + 1 });
   }
