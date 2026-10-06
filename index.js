@@ -17,88 +17,20 @@ let sizeSlider = document.querySelector("#size-slider"),
   fileExtensionsInputBox = document.querySelector("#fileExtensions"),
   saveNotesBtn = document.querySelector(".saveNoteBtn");
 let isDrawing = false;
-let selectedTool,
+let selectedTool = "brush",
   snapshot,
-  brushWidth = 5,
-  selectedTheme,
-  micImgElement = document.querySelector(".micImgReal");
-// console.log(micImgElement);
+  brushWidth = 5;
 
 InscribeStorage.ready()
   .then(() => InscribeStorage.get("popupTheme"))
   .then(({ popupTheme }) => {
-    selectedTheme = popupTheme || "yellowMode";
-    if (!popupTheme) InscribeStorage.set({ popupTheme: selectedTheme });
-    applyTheme();
+    InscribeThemes.applyPopupTheme(popupTheme);
+    if (!popupTheme) {
+      InscribeStorage.set({ popupTheme: InscribeThemes.DEFAULT_POPUP_THEME });
+    }
   });
 
-function applyTheme() {
-  if (selectedTheme == "yellowMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "rgb(245, 204, 0)";
-    });
-    micImgElement.style.fill = "black";
-    sizeSlider.style.accentColor = "rgb(245, 204, 0)";
-  } else if (selectedTheme == "blueMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "rgb(245, 204, 0)";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "#3486eb";
-  } else if (selectedTheme == "purpleMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "purple";
-      elem.style.color = "white";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "purple";
-  } else if (selectedTheme == "greenMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "green";
-      elem.style.color = "white";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "green";
-  } else if (selectedTheme == "redMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "darkred";
-      elem.style.color = "white";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "darkRed";
-  } else if (selectedTheme == "pinkMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "pink";
-      elem.style.color = "black";
-    });
-    micImgElement.style.fill = "black";
-    sizeSlider.style.accentColor = "pink";
-  } else if (selectedTheme == "darkMode") {
-    document.querySelectorAll(".btn").forEach((elem) => {
-      elem.style.background = "#333";
-      elem.style.color = "white";
-    });
-    micImgElement.style.fill = "white";
-    sizeSlider.style.accentColor = "#333";
-  }
-}
-extpay
-  .getUser()
-  .then((user) => {
-    const now = new Date();
-    const sevenDays = 1000 * 60 * 60 * 24 * 7; // seven days in milliseconds
-    if (
-      user.paid ||
-      (user.trialStartedAt && now - user.trialStartedAt < sevenDays) // Checking if the user's trial still works
-    ) {
-      selectedTool = "brush";
-    } else {
-      selectedTool = "eraser";
-    }
-  })
-  .catch((err) => {});
-
-const mouse = {
+const strokeStart = {
   x: undefined,
   y: undefined,
 };
@@ -107,15 +39,15 @@ function drawRect(event) {
     return ctx.strokeRect(
       event.offsetX,
       event.offsetY,
-      mouse.x - event.offsetX,
-      mouse.y - event.offsetY
+      strokeStart.x - event.offsetX,
+      strokeStart.y - event.offsetY
     );
   }
   ctx.fillRect(
     event.offsetX,
     event.offsetY,
-    mouse.x - event.offsetX,
-    mouse.y - event.offsetY
+    strokeStart.x - event.offsetX,
+    strokeStart.y - event.offsetY
   );
 }
 
@@ -128,74 +60,83 @@ window.addEventListener("load", () => {
   canvas.width = canvas.parentElement.offsetWidth;
   canvas.height = canvas.parentElement.offsetHeight;
   setBackgroundColor();
+  canvasHistory = [];
+  pushHistory();
 });
 
 function drawCircle(event) {
   ctx.beginPath();
   let radius = Math.sqrt(
-    Math.pow(mouse.x - event.offsetX, 2) + Math.pow(mouse.y - event.offsetY, 2)
+    Math.pow(strokeStart.x - event.offsetX, 2) + Math.pow(strokeStart.y - event.offsetY, 2)
   );
-  ctx.arc(mouse.x, mouse.y, radius, 0, 2 * Math.PI);
+  ctx.arc(strokeStart.x, strokeStart.y, radius, 0, 2 * Math.PI);
   fillColor.checked ? ctx.fill() : ctx.stroke();
 }
 
 function drawTriangle(event) {
   ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
+  ctx.moveTo(strokeStart.x, strokeStart.y);
   ctx.lineTo(event.offsetX, event.offsetY);
-  ctx.lineTo(mouse.x * 2 - event.offsetX, event.offsetY);
+  ctx.lineTo(strokeStart.x * 2 - event.offsetX, event.offsetY);
   ctx.closePath();
   fillColor.checked ? ctx.fill() : ctx.stroke();
 }
 
 function drawLine(event) {
   ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
+  ctx.moveTo(strokeStart.x, strokeStart.y);
   ctx.lineTo(event.offsetX, event.offsetY);
   ctx.stroke();
 }
-let pathsry = [];
-let points = [];
-let redoArr = [];
-let previous = { x: 0, y: 0 };
-let iouse = { x: 0, y: 0 };
+// Undo/redo keeps a snapshot of the whole canvas after each finished stroke,
+// so shapes, colours, widths and the eraser all come back exactly.
+const MAX_UNDO_STEPS = 30;
+let canvasHistory = []; // last entry is the current canvas
+let redoStack = [];
 
-// Assuming ctx, canvas, toolsBtn, sizeSlider, colorBtns, colorPicker, and clearCanvas are already defined
+function pushHistory() {
+  canvasHistory.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  if (canvasHistory.length > MAX_UNDO_STEPS + 1) canvasHistory.shift();
+  redoStack = [];
+}
+
+function undo() {
+  if (canvasHistory.length < 2) return;
+  redoStack.push(canvasHistory.pop());
+  ctx.putImageData(canvasHistory[canvasHistory.length - 1], 0, 0);
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  const next = redoStack.pop();
+  canvasHistory.push(next);
+  ctx.putImageData(next, 0, 0);
+}
 
 function startDrawing(event) {
   isDrawing = true;
-  mouse.x = event.offsetX;
-  mouse.y = event.offsetY;
-  previous = { x: mouse.x, y: mouse.y };
-  iouse = oMousePos(canvas, event);
-  points = [{ x: iouse.x, y: iouse.y }];
+  strokeStart.x = event.offsetX;
+  strokeStart.y = event.offsetY;
   ctx.lineWidth = brushWidth;
   ctx.strokeStyle = selectedColor;
   ctx.fillStyle = selectedColor;
   ctx.beginPath();
+  ctx.moveTo(strokeStart.x, strokeStart.y);
   snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-function oMousePos(canvas, evt) {
-  var ClientRect = canvas.getBoundingClientRect();
-  return {
-    x: Math.round(evt.clientX - ClientRect.left),
-    y: Math.round(evt.clientY - ClientRect.top),
-  };
-}
-
-canvas.addEventListener("mousemove", (event) => {
+// Pointer Events cover mouse, touch and pen with one code path; offsetX/Y
+// are always relative to the canvas, whatever the scroll position.
+canvas.style.touchAction = "none"; // don't scroll the page while drawing
+canvas.addEventListener("pointermove", (event) => {
   if (!isDrawing) return;
 
-  previous = { x: iouse.x, y: iouse.y };
-  iouse = oMousePos(canvas, event);
-  points.push({ x: iouse.x, y: iouse.y });
   ctx.putImageData(snapshot, 0, 0);
 
   if (selectedTool === "brush" || selectedTool === "eraser") {
     ctx.strokeStyle = selectedTool === "eraser" ? "#FFF" : selectedColor;
     ctx.lineWidth = brushWidth;
-    ctx.lineTo(iouse.x, iouse.y);
+    ctx.lineTo(event.offsetX, event.offsetY);
     ctx.stroke();
   } else if (selectedTool === "rectangle") {
     drawRect(event);
@@ -208,54 +149,21 @@ canvas.addEventListener("mousemove", (event) => {
   }
 });
 
-canvas.addEventListener("mousedown", startDrawing);
-canvas.addEventListener("mouseup", endDrawing);
+canvas.addEventListener("pointerdown", (event) => {
+  canvas.setPointerCapture(event.pointerId); // keep drawing if the pointer leaves the canvas
+  startDrawing(event);
+});
+canvas.addEventListener("pointerup", endDrawing);
+canvas.addEventListener("pointercancel", endDrawing);
 
 function endDrawing() {
   if (!isDrawing) return;
   isDrawing = false;
-  pathsry.push([...points]);
-  redoArr = [];
-  allowRedo = false;
+  pushHistory();
 }
 
-function drawPaths() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  pathsry.forEach((path) => {
-    if (path.length < 1) return;
-    ctx.beginPath();
-    ctx.moveTo(path[0].x, path[0].y);
-    for (let i = 1; i < path.length; i++) {
-      ctx.lineTo(path[i].x, path[i].y);
-    }
-    ctx.stroke();
-  });
-}
-
-let allowRedo = false;
-
-function Undo() {
-  if (pathsry.length > 0) {
-    redoArr.push(pathsry.pop());
-    allowRedo = true;
-    drawPaths();
-  }
-}
-
-function Redo() {
-  if (allowRedo && redoArr.length > 0) {
-    pathsry.push(redoArr.pop());
-    drawPaths();
-    if (redoArr.length === 0) {
-      allowRedo = false;
-    }
-  }
-}
-
-let undoBtn = document.querySelector(".undo-btn");
-undoBtn.addEventListener("click", Undo);
-let redoBtn = document.querySelector(".redo-btn");
-redoBtn.addEventListener("click", Redo);
+document.querySelector(".undo-btn").addEventListener("click", undo);
+document.querySelector(".redo-btn").addEventListener("click", redo);
 
 toolsBtn.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -285,18 +193,9 @@ colorPicker.addEventListener("change", () => {
 });
 
 clearCanvas.addEventListener("click", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  pathsry = [];
-  redoArr = [];
-  setBackgroundColor();
+  setBackgroundColor(); // paint white rather than clear, so exports aren't transparent
+  pushHistory(); // clearing can be undone
 });
-
-// saveImage.addEventListener("click", () => {
-//   const link = document.createElement("a");
-//   link.download = `${Date.now()}.jpg`;
-//   link.href = canvas.toDataURL();
-//   link.click();
-// });
 
 let show = false;
 
@@ -306,14 +205,6 @@ function disappear() {
   }
 }
 
-// optionsBtn.addEventListener("mouseover", () => {
-//   optionUI.style.display = "block";
-//   show = true;
-// });
-// optionsBtn.addEventListener("mouseleave", () => {
-//   setTimeout(disappear, 1000);
-//   show = false;
-// });
 optionUI.addEventListener("mouseover", () => {
   optionUI.style.display = "block";
   show = true;
@@ -322,139 +213,24 @@ optionUI.addEventListener("mouseleave", () => {
   optionUI.style.display = "none";
 });
 
-// Touch Drawing
-const rectLeft = canvas.getBoundingClientRect().left;
-const rectTop = canvas.getBoundingClientRect().top;
-function startTouchDrawing(event) {
-  [...event.changedTouches].forEach((touch) => {
-    isDrawing = true;
-    mouse.x = touch.pageX - rectLeft;
-    mouse.y = touch.pageY - rectTop;
-    // console.log(touch);
-    ctx.lineWidth = brushWidth;
-    ctx.strokeStyle = selectedColor;
-    ctx.fillStyle = selectedColor;
-    ctx.beginPath();
-    snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  });
-}
-
-canvas.addEventListener("touchmove", (event) => {
-  [...event.changedTouches].forEach((touch) => {
-    if (!isDrawing) return;
-    ctx.putImageData(snapshot, 0, 0);
-    // console.log(rectLeft);
-    if (selectedTool === "brush" || selectedTool === "eraser") {
-      ctx.strokeStyle = selectedTool === "eraser" ? "#FFF" : selectedColor;
-      ctx.lineWidth = brushWidth;
-      ctx.lineTo(touch.pageX - rectLeft, touch.pageY - rectTop);
-      ctx.stroke();
-    } else if (selectedTool === "rectangle") {
-      drawTouchRect(touch);
-    } else if (selectedTool === "circle") {
-      drawTouchCircle(touch);
-    } else if (selectedTool === "triangle") {
-      drawTouchTriangle(touch);
-    } else if (selectedTool === "line") {
-      drawTouchLine(touch);
-    }
-  });
-});
-
-function drawTouchRect(touch) {
-  if (!fillColor.checked) {
-    return ctx.strokeRect(
-      touch.pageX - rectLeft,
-      touch.pageY - rectTop,
-      mouse.x - (touch.pageX - rectLeft),
-      mouse.y - (touch.pageY - rectTop)
-    );
-  }
-  ctx.fillRect(
-    touch.pageX - rectLeft,
-    touch.pageY - rectTop,
-    mouse.x - (touch.pageX - rectLeft),
-    mouse.y - touch.pageY - rectTop
-  );
-}
-
-function drawTouchCircle(touch) {
-  ctx.beginPath();
-  let radius = Math.sqrt(
-    Math.pow(mouse.x - (touch.pageX - rectLeft), 2) +
-      Math.pow(mouse.y - (touch.pageY - rectTop), 2)
-  );
-  ctx.arc(
-    touch.pageX - rectLeft,
-    touch.pageY - rectTop,
-    radius,
-    0,
-    2 * Math.PI
-  );
-  fillColor.checked ? ctx.fill() : ctx.stroke();
-}
-
-function drawTouchTriangle(touch) {
-  ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
-  ctx.lineTo(touch.pageX - rectLeft, touch.pageY - rectTop);
-  ctx.lineTo(mouse.x * 2 - (touch.pageX - rectLeft), touch.pageY - rectTop);
-  ctx.closePath();
-  fillColor.checked ? ctx.fill() : ctx.stroke();
-}
-
-function drawTouchLine(touch) {
-  ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
-  ctx.lineTo(touch.pageX - rectLeft, touch.pageY - rectTop);
-  ctx.stroke();
-}
-
-canvas.addEventListener("touchstart", startTouchDrawing);
-canvas.addEventListener("touchend", endDrawing);
-
 // Saving Note locally as a file
 fileExtensionsInputBox.addEventListener("change", () => {
   let selectedOption =
     fileExtensionsInputBox.options[fileExtensionsInputBox.selectedIndex].text;
   saveAsFileBtn.innerText = `Save As ${selectedOption.split(" ")[0]} File`;
-  console.log(selectedOption.split(" ")[0]);
 });
 
-// Saving Notes in storage
-const months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+// Saving notes to storage as sanitized HTML, so formatting is kept
 saveNotesBtn.addEventListener("click", async () => {
   if (fileNameInputBox.value) {
     await InscribeStorage.ready();
     const { myNotes = [] } = await InscribeStorage.get("myNotes");
-    let dateObj = new Date();
-    let month = months[dateObj.getMonth()],
-      day = dateObj.getDate(),
-      year = dateObj.getFullYear();
-    let textModified = textAreaText.textContent;
-    console.log(textModified);
-    textModified = textModified.replace(/  /g, "\t");
-    textModified = textModified.replace(/\n/g, "<br>\n");
-    console.log(textAreaText.innerHTML);
-    let note = {
-      text: textModified,
+    const note = {
+      text: sanitizeNoteHtml(textAreaText.innerHTML),
       title: fileNameInputBox.value,
-      date: `${month} ${day}, ${year}`,
+      date: formatNoteDate(new Date()),
     };
-    textAreaText.textContent = "";
+    textAreaText.replaceChildren();
     await InscribeStorage.set({ myNotes: [...myNotes, note], liveNote: "" });
     fileNameInputBox.value = "";
     fileNameInputBox.style.border = "1px solid black";
@@ -463,10 +239,10 @@ saveNotesBtn.addEventListener("click", async () => {
   }
 });
 
-// Clear Textarea Buttonn
+// Clear Textarea Button
 const clearAreaBtn = document.querySelector(".clearTextarea");
 clearAreaBtn.addEventListener("click", () => {
-  textAreaText.textContent = "";
+  textAreaText.replaceChildren();
   InscribeStorage.set({ liveNote: "" });
 });
 
@@ -477,7 +253,7 @@ const popupBox = document.querySelector(".popup-box"),
 const closePopupBtn = document.querySelector(".Upgradecontent header img"),
   payBtn = document.querySelector(".pay"),
   trialBtn = document.querySelector(".trial");
-options = document.querySelectorAll("footer li");
+const options = document.querySelectorAll("footer li");
 closePopupBtn.addEventListener("click", () => {
   popupBox.classList.remove("see");
 });
@@ -485,33 +261,23 @@ closeErrorPopupBtn.addEventListener("click", () => {
   errorBox.classList.remove("see");
 });
 
-// Replace 'sample-extension' with the id of the extension you
-// registered on ExtensionPay.com to test payments. You may need to
-// uninstall and reinstall the extension to make it work.
-// Don't forget to change the ID in background.js too!
-
-// document
-//   .querySelector("button")
-//   .addEventListener("click", extpay.openPaymentPage);
+// Premium features: when payment status can't be fetched (offline, ExtPay
+// unreachable) the buttons explain that instead of silently doing nothing.
+function gateFeatures(popup) {
+  [saveImage, optionsBtn, saveAsFileBtn].forEach((btn) =>
+    btn.addEventListener("click", () => popup.classList.add("see"))
+  );
+}
 
 extpay
   .getUser()
   .then((user) => {
-    const now = new Date();
-    const sevenDays = 1000 * 60 * 60 * 24 * 7; // seven days in milliseconds
-    if (
-      user.paid ||
-      (user.trialStartedAt && now - user.trialStartedAt < sevenDays)
-    ) {
+    if (InscribePremium.isPremium(user)) {
       saveAsFileBtn.addEventListener("click", () => {
-        const blob = new Blob([textAreaText.textContent], {
-          type: fileExtensionsInputBox.value,
+        InscribeDownload.exportNote(fileExtensionsInputBox.value, {
+          title: fileNameInputBox.value,
+          html: sanitizeNoteHtml(textAreaText.innerHTML),
         });
-        const fileUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.download = fileNameInputBox.value;
-        link.href = fileUrl;
-        link.click();
       });
       saveImage.addEventListener("click", () => {
         const link = document.createElement("a");
@@ -536,22 +302,10 @@ extpay
         elem.style.pointerEvents = "all";
       });
     } else {
-      saveImage.addEventListener("click", () => {
-        popupBox.classList.add("see");
-      });
-      optionsBtn.addEventListener("click", () => {
-        popupBox.classList.add("see");
-      });
-      saveAsFileBtn.addEventListener("click", () => {
-        popupBox.classList.add("see");
-      });
+      gateFeatures(popupBox);
     }
   })
-  .catch((err) => {
-    // document.querySelector("p").innerHTML =
-    //   "Error fetching data :( Check that your ExtensionPay id is correct and you're connected to the internet";
-  });
-// extpay.onPaid(function() { console.log('popup paid')});
+  .catch(() => gateFeatures(errorBox));
 payBtn.addEventListener("click", () => {
   if (navigator.onLine) {
     extpay.openPaymentPage();
@@ -563,71 +317,20 @@ payBtn.addEventListener("click", () => {
 trialBtn.addEventListener("click", () => {
   extpay.openTrialPage();
 });
-// window.addEventListener("online", () => {
-//   payBtn.addEventListener("click", extpay.openPaymentPage);
-// });
-// window.addEventListener("offline", () => {
-//   payBtn.addEventListener("click", () => {
-//     errorBox.classList.add("see");
-//   });
-// });
 
 // Speech to text
 const micBtn = document.querySelector(".micImg");
-// var a,
-//   iterator = 0,
-//   isRecording = false;
-// micBtn.addEventListener("click", () => {
-//   micBtn.classList.toggle("on");
-//   isRecording = !isRecording;
-//   if (micBtn.className == "micImg on" && isRecording) {
-//     pasteBtn.classList.add("off");
-//     chrome.tabs.query({ currentWindow: true, active: true }, (tab) => {
-//       chrome.tabs.sendMessage(
-//         tab[0].id,
-//         {
-//           message: "Start Recording",
-//         },
-//         function (response) {
-//           if (response) {
-//             a = response.value;
-//           }
-//           console.log(response);
-//         }
-//       );
-//     });
-//   }
-//   if (!isRecording) {
-//     micBtn.click();
-//     micBtn.click();
-//     setTimeout(clickable, 1000);
-//   }
-//   function clickable() {
-//     pasteBtn.classList.remove("off");
-//   }
-// });
-// pasteBtn.addEventListener("click", () => {
-//   textAreaText.value = "";
-//   textAreaText.value += a;
-//   console.log(a);
-// });
 micBtn.addEventListener("click", () => {
   chrome.tabs.create({ url: "speech.html" });
 });
 
-// Auto Saving
-let previousValue = textAreaText.textContent;
-
+// Auto saving: debounced, keeps formatting
+let autosaveTimer = null;
 textAreaText.addEventListener("input", () => {
-  if (previousValue !== textAreaText.textContent) {
-    previousValue = textAreaText.textContent;
-    const event = new Event("change");
-    textAreaText.dispatchEvent(event);
-  }
-});
-
-textAreaText.addEventListener("change", () => {
-  InscribeStorage.set({ liveNote: textAreaText.textContent });
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    InscribeStorage.set({ liveNote: sanitizeNoteHtml(textAreaText.innerHTML) });
+  }, 300);
 });
 // More formatting Options
 let moreFormatting = document.querySelector(".more"),
@@ -638,13 +341,11 @@ moreFormatting.addEventListener("click", () => {
 
 // Rich Formatting Tools
 let optionButtons = document.querySelectorAll(".option-button");
-let advanvedOptionButtons = document.querySelectorAll(".adv-option-button");
 let linkButton = document.getElementById("createLink");
 let alignButtons = document.querySelectorAll(".align");
 let spacingButtons = document.querySelectorAll(".spacing");
 let formatButtons = document.querySelectorAll(".format");
 let scriptButtons = document.querySelectorAll(".script");
-let fontSizeSelect = document.querySelector(".formatSelects .two");
 const initializer = () => {
   highlighter(alignButtons, true);
   highlighter(spacingButtons, true);
@@ -674,26 +375,12 @@ const highlighter = (className, needsRemoval) => {
   });
 };
 
-function formatDoc(cmd, value = null) {
-  if (value) {
-    document.execCommand(cmd, false, value);
-  } else {
-    document.execCommand(cmd);
-  }
-}
 optionButtons.forEach((elem) => {
   elem.addEventListener("click", () => {
-    formatDoc(`${elem.id}`);
+    InscribeFormatting.formatDoc(elem.id);
   });
 });
-linkButton.addEventListener("click", () => {
-  let url = prompt("Insert URL");
-  formatDoc("createLink", url);
-});
-// fontSizeSelect.addEventListener("change", () => {
-//   formatDoc("fontSize", this.value);
-//   this.selectedIndex = 0;
-// });
+linkButton.addEventListener("click", InscribeFormatting.createLink);
 textAreaText.addEventListener("mouseenter", () => {
   const a = document.querySelectorAll("a");
   a.forEach((item) => {
@@ -716,11 +403,6 @@ window.onload = async () => {
   initializer();
   await InscribeStorage.ready();
   const { liveNote } = await InscribeStorage.get("liveNote");
-  if (liveNote) {
-    textAreaText.focus();
-    textAreaText.textContent = liveNote;
-  } else {
-    textAreaText.textContent = "";
-  }
-  previousValue = textAreaText.textContent;
+  textAreaText.innerHTML = sanitizeNoteHtml(liveNote);
+  if (liveNote) textAreaText.focus();
 };

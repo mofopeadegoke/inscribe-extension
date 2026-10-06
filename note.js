@@ -1,42 +1,33 @@
 const extpay = ExtPay("inscribe");
-let notesContainer = document.querySelector(".notes"),
-  closePopupBtn = document.querySelector(".Updatecontent header img"),
+const notesContainer = document.querySelector(".notes"),
+  editPopup = document.querySelector(".editPopup"),
+  closeEditPopupBtn = document.querySelector(".Updatecontent header img"),
+  titleInputEl = document.querySelector(".Updatecontent .title input"),
+  editorEl = document.querySelector(".Updatecontent .noteEditor"),
+  updateNoteBtn = document.querySelector(".Updatecontent .updateNoteBtn"),
   saveNoteLocallyPopupBox = document.querySelector(".notePopup-box"),
   saveNoteLocallyTitle = document.querySelector(".notePopup-box .noteTitle"),
-  saveNoteLocallyNoteContentEl = document.querySelector(
-    ".notePopup-box .noteContent"
-  ),
-  deleteNoteBtns,
+  saveNoteLocallyContent = document.querySelector(".notePopup-box .noteContent"),
   saveNoteLocallyFileName = document.querySelector(".notePopup-box .fileName"),
-  showContentBtns,
-  updateBtns,
-  titleInputEl = document.querySelector(".title input"),
-  descriptionInputEl = document.querySelector(".description textarea"),
-  isUpdate = false,
-  updateId,
-  updateNoteBtn = document.querySelector(".Updatecontent button"),
-  copyBtns,
-  alertBox,
-  copyId,
-  saveNoteLocallyBtns,
   closeSaveNoteLocallyPopup = document.querySelector(
     ".notePopup-box .notePopup-boxCloseBtn"
   ),
-  saveNoteLocallyActionBtn = document.querySelector(
-    ".saveNoteLocallyBtnAction"
-  );
-let closeUpgradePopupBtn = document.querySelector(".Upgradecontent header img");
-const popupBox = document.querySelector(".popup-box"),
-  popupBoxUpgrade = document.querySelector(".upgrade"),
-  errorBox = document.querySelector(".error-box"),
-  closeErrorPopupBtn = document.querySelector(".errorContent header img"),
-  payBtn = document.querySelector(".pay");
-const trialBtn = document.querySelector(".trial");
-var totalNotes = [],
-  selectedTheme;
+  saveNoteLocallyActionBtn = document.querySelector(".saveNoteLocallyBtnAction"),
+  fileExtensionBox = document.querySelector("#fileExtensions"),
+  upgradePopup = document.querySelector(".upgrade"),
+  closeUpgradePopupBtn = document.querySelector(".upgrade header img"),
+  errorPopup = document.querySelector(".errorPopup"),
+  closeErrorPopupBtn = document.querySelector(".errorPopup header img"),
+  payBtn = document.querySelector(".pay"),
+  trialBtn = document.querySelector(".trial");
+
+let totalNotes = [],
+  updateId = null;
+
 function saveNotes() {
   return InscribeStorage.set({ myNotes: totalNotes });
 }
+
 // Static markup only; note fields are filled in with textContent or
 // sanitized HTML so a title or body can never break or inject markup.
 const noteTemplate = `
@@ -60,294 +51,154 @@ function renderNotes() {
   const articles = totalNotes.map((note, index) => {
     const article = document.createElement("article");
     article.className = "noteDiv";
+    article.dataset.id = index;
     article.innerHTML = noteTemplate;
     article.querySelector("h3").textContent = note.title;
     article.querySelector(".noteBody").innerHTML = sanitizeNoteHtml(note.text);
     article.querySelector(".noteDate").textContent = note.date;
-    article
-      .querySelectorAll(".copiedToClipboardAlert, .showContentBtn, li")
-      .forEach((el) => el.setAttribute("data-id", index));
     return article;
   });
-  if (notesContainer) {
-    notesContainer.replaceChildren(...articles);
-  }
-  if (selectedTheme == "yellowMode") {
-    if (document.querySelectorAll(".noteDiv")) {
-      document.querySelectorAll(".noteDiv").forEach((elem) => {
-        elem.style.background = "rgb(245, 204, 0)";
-        elem.style.color = "black";
-      });
-      document.querySelectorAll("button").forEach((elem) => {
-        elem.style.background = "rgb(245, 204, 0)";
-        elem.style.color = "black";
-      });
-    }
-  } else if (selectedTheme == "blueMode") {
-    if (document.querySelectorAll(".noteDiv")) {
-      document.querySelectorAll(".noteDiv").forEach((elem) => {
-        elem.style.background = "#3486eb";
-        elem.style.color = "white";
-      });
-      document.querySelectorAll("button").forEach((elem) => {
-        elem.style.background = "#3486eb";
-        elem.style.color = "white";
-      });
-    }
-  } else if (selectedTheme == "purpleMode") {
-    if (document.querySelectorAll(".noteDiv")) {
-      document.querySelectorAll(".noteDiv").forEach((elem) => {
-        elem.style.background = "purple";
-        elem.style.color = "white";
-      });
-      document.querySelectorAll("button").forEach((elem) => {
-        elem.style.background = "purple";
-        elem.style.color = "white";
-      });
-    }
-  } else if (selectedTheme == "greenMode") {
-    if (document.querySelectorAll(".noteDiv")) {
-      document.querySelectorAll(".noteDiv").forEach((elem) => {
-        elem.style.background = "green";
-        elem.style.color = "white";
-      });
-      document.querySelectorAll("button").forEach((elem) => {
-        elem.style.background = "green";
-        elem.style.color = "white";
-      });
-    }
-  } else if (selectedTheme == "redMode") {
-    if (document.querySelectorAll(".noteDiv")) {
-      document.querySelectorAll(".noteDiv").forEach((elem) => {
-        elem.style.background = "darkred";
-        elem.style.color = "white";
-      });
-      document.querySelectorAll("button").forEach((elem) => {
-        elem.style.background = "darkred";
-        elem.style.color = "white";
-      });
-    }
-  } else if (selectedTheme == "pinkMode") {
-    if (document.querySelectorAll(".noteDiv")) {
-      document.querySelectorAll(".noteDiv").forEach((elem) => {
-        elem.style.background = "pink";
-        elem.style.color = "black";
-      });
-      document.querySelectorAll("button").forEach((elem) => {
-        elem.style.background = "pink";
-        elem.style.color = "black";
-      });
-    }
-  } else if (selectedTheme == "darkMode") {
-    if (document.querySelectorAll(".noteDiv")) {
-      document.querySelectorAll(".noteDiv").forEach((elem) => {
-        elem.style.background = "#333";
-        elem.style.color = "white";
-      });
-      document.querySelectorAll("button").forEach((elem) => {
-        elem.style.background = "#333";
-        elem.style.color = "white";
-      });
-    }
-  }
+  notesContainer.replaceChildren(...articles);
 }
-window.onload = async () => {
-  await InscribeStorage.ready();
-  const { myNotes, popupTheme } = await InscribeStorage.get([
-    "myNotes",
-    "popupTheme",
-  ]);
-  totalNotes = myNotes || [];
-  selectedTheme = popupTheme || "yellowMode";
-  renderNotes();
 
-  deleteNoteBtns = document.querySelectorAll(".deleteNoteBtn");
-  showContentBtns = document.querySelectorAll(".showContentBtn");
-  updateBtns = document.querySelectorAll(".updateBtn");
-  copyBtns = document.querySelectorAll(".copyBtn");
-  saveNoteLocallyBtns = document.querySelectorAll(".saveNoteLocallyBtn");
-  alertBox = document.querySelectorAll(".copiedToClipboardAlert");
-  deleteNoteBtns.forEach((elem) => {
-    elem.addEventListener("click", async () => {
-      let confirmDel = confirm("Are you sure you want to delete note?");
-      if (!confirmDel) return;
-      noteId = elem.getAttribute("data-id");
-      totalNotes.splice(noteId, 1);
-      await saveNotes();
-      window.location.reload();
-    });
-  });
-  showContentBtns.forEach((elem) => {
-    elem.addEventListener("click", () => {
-      elem.classList.toggle("show");
-    });
-  });
-  updateBtns.forEach((elem) => {
-    elem.addEventListener("click", () => {
-      updateId = elem.getAttribute("data-id");
-      const { title, text: desc } = totalNotes[updateId];
-      popupBox.classList.add("see");
-      let textModified = desc;
-      textModified = textModified.replace(/\t/g, "  ");
-      textModified = textModified.replace(/<br>/g, "\n");
-      titleInputEl.value = title;
-      descriptionInputEl.value = textModified;
-      titleInputEl.focus();
-      // console.log(id, title, textModified);
-    });
-  });
-  closePopupBtn.addEventListener("click", () => {
-    popupBox.classList.remove("see");
-  });
-  saveNoteLocallyBtns.forEach((elem) => {
-    elem.addEventListener("click", () => {
-      extpay
-        .getUser()
-        .then((user) => {
-          const now = new Date();
-          const sevenDays = 1000 * 60 * 60 * 24 * 7; // seven days in milliseconds
-          if (
-            user.paid ||
-            (user.trialStartedAt && now - user.trialStartedAt < sevenDays)
-          ) {
-            const { title, text: desc } = totalNotes[elem.getAttribute("data-id")];
-            saveNoteLocallyPopupBox.classList.add("see");
-            saveNoteLocallyTitle.value = title;
-            saveNoteLocallyNoteContentEl.value = desc;
-            saveNoteLocallyFileName.value = title;
-            saveNoteLocallyFileName.focus();
-          } else {
-            popupBoxUpgrade.classList.add("see");
-          }
-        })
-        .catch((err) => {
-          errorBox.classList.add("see");
-        });
-    });
-  });
-  closeUpgradePopupBtn.addEventListener("click", () => {
-    // console.log("Hello");
-    // console.log(popupBoxUpgrade);
-    popupBoxUpgrade.classList.remove("see");
-  });
-  copyBtns.forEach((elem) => {
-    elem.addEventListener("click", () => {
-      copyId = elem.getAttribute("data-id");
-      const parser = new DOMParser();
-      const parserhtml = parser.parseFromString(
-        sanitizeNoteHtml(totalNotes[copyId].text),
-        "text/html"
-      );
-      const textContent = parserhtml.body.innerText;
-      navigator.clipboard.writeText(textContent);
-      // elem.parentElement.previousElementSibling.click();
-      alertBox.forEach((elem) => {
-        if (elem.getAttribute("data-id") == copyId) {
-          elem.classList.add("alertShow");
+// ---------- note actions (one delegated handler for the whole list) ----------
+
+const noteActions = {
+  showContentBtn(article, target) {
+    target.classList.toggle("show");
+  },
+
+  async deleteNoteBtn(article, target, id) {
+    if (!confirm("Are you sure you want to delete note?")) return;
+    totalNotes.splice(id, 1);
+    await saveNotes();
+    renderNotes();
+  },
+
+  updateBtn(article, target, id) {
+    updateId = id;
+    titleInputEl.value = totalNotes[id].title;
+    editorEl.innerHTML = sanitizeNoteHtml(totalNotes[id].text);
+    editPopup.classList.add("see");
+    titleInputEl.focus();
+  },
+
+  copyBtn(article, target, id) {
+    navigator.clipboard.writeText(
+      InscribeDownload.htmlToText(sanitizeNoteHtml(totalNotes[id].text))
+    );
+    const copiedAlert = article.querySelector(".copiedToClipboardAlert");
+    copiedAlert.classList.add("alertShow");
+    setTimeout(() => copiedAlert.classList.remove("alertShow"), 3100);
+  },
+
+  saveNoteLocallyBtn(article, target, id) {
+    extpay
+      .getUser()
+      .then((user) => {
+        if (InscribePremium.isPremium(user)) {
+          const { title, text } = totalNotes[id];
+          saveNoteLocallyTitle.value = title;
+          saveNoteLocallyContent.innerHTML = sanitizeNoteHtml(text);
+          saveNoteLocallyFileName.value = title;
+          saveNoteLocallyPopupBox.classList.add("see");
+          saveNoteLocallyFileName.focus();
+        } else {
+          upgradePopup.classList.add("see");
         }
+      })
+      .catch(() => {
+        errorPopup.classList.add("see");
       });
-      function hideNow() {
-        alertBox.forEach((elem) => {
-          if (elem.getAttribute("data-id") == copyId) {
-            elem.classList.remove("alertShow");
-          }
-        });
-      }
-      setTimeout(hideNow, 3100);
-    });
-  });
-  // console.log(deleteNoteBtns);
+  },
 };
-// notesContainer.addEventListener("click", (e) => {
-//   if (e.target.matches(".deleteNoteBtn")) {
-//     ID = e.target.getAttribute("data-id");
-//     for (let i = 0; i < totalNotes.length; i++) {
-//       if (ID == totalNotes[i].id) totalNotes.splice(i, 1);
-//     }
-//   }
-//   // console.log(totalNotes);
-//   localStorage.setItem("myNotes", JSON.stringify(totalNotes));
-//   renderNotes();
-// });
 
-// function showMenu(elem) {
-//   elem.classList.toggle("show");
-// }
-// function deleteNote(noteId) {
-//   // console.log();
-//
-// }
-
-updateNoteBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-  let dateObj = new Date();
-  let month = months[dateObj.getMonth()],
-    day = dateObj.getDate(),
-    year = dateObj.getFullYear();
-  let textModified = descriptionInputEl.value;
-  textModified = textModified.replace(/  /g, "\t");
-  textModified = textModified.replace(/\n/g, "<br>\n");
-  let note = {
-    text: textModified,
-    title: titleInputEl.value,
-    date: `${month} ${day}, ${year}`,
-  };
-  totalNotes[updateId] = note;
-  closePopupBtn.click();
-  saveNotes().then(() => window.onload());
+notesContainer.addEventListener("click", (e) => {
+  const article = e.target.closest(".noteDiv");
+  if (!article) return;
+  const id = Number(article.dataset.id);
+  for (const [cls, action] of Object.entries(noteActions)) {
+    const target = e.target.closest(`.${cls}`);
+    if (target && article.contains(target)) {
+      action(article, target, id);
+      return;
+    }
+  }
 });
-closePopupBtn.addEventListener("click", (e) => {
+
+// ---------- edit popup ----------
+
+InscribeFormatting.bindToolbar(document.querySelector(".Updatecontent .editorToolbar"));
+
+function closeEditPopup() {
   titleInputEl.value = "";
-  descriptionInputEl.value = "";
-  popupBox.classList.remove("see");
+  editorEl.replaceChildren();
+  updateId = null;
+  editPopup.classList.remove("see");
+}
+
+updateNoteBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+  if (updateId === null) return;
+  totalNotes[updateId] = {
+    text: sanitizeNoteHtml(editorEl.innerHTML),
+    title: titleInputEl.value,
+    date: formatNoteDate(new Date()),
+  };
+  closeEditPopup();
+  await saveNotes();
+  renderNotes();
 });
+closeEditPopupBtn.addEventListener("click", closeEditPopup);
+
+// ---------- save-locally popup ----------
+
 closeSaveNoteLocallyPopup.addEventListener("click", () => {
   saveNoteLocallyTitle.value = "";
-  saveNoteLocallyNoteContentEl.value = "";
+  saveNoteLocallyContent.replaceChildren();
   saveNoteLocallyFileName.value = "";
   saveNoteLocallyPopupBox.classList.remove("see");
 });
-const noteContentElement = document.querySelector(".noteContent"),
-  fileExtensionBox = document.querySelector("#fileExtensions");
 
-fileExtensionBox.addEventListener("click", () => {
-  let selectedOption =
-    fileExtensionBox.options[fileExtensionBox.selectedIndex].text;
-  saveNoteLocallyActionBtn.innerText = `Save locally as ${
-    selectedOption.split(" ")[0]
-  } File`;
-  // console.log(selectedOption.split(" ")[0]);
+fileExtensionBox.addEventListener("change", () => {
+  const selectedOption = fileExtensionBox.options[fileExtensionBox.selectedIndex].text;
+  saveNoteLocallyActionBtn.innerText = `Save locally as ${selectedOption.split(" ")[0]} File`;
 });
-saveNoteLocallyActionBtn.addEventListener("click", () => {
-  const blob = new Blob([noteContentElement.value], {
-    type: fileExtensionBox.value,
+
+saveNoteLocallyActionBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  InscribeDownload.exportNote(fileExtensionBox.value, {
+    title: saveNoteLocallyTitle.value,
+    html: sanitizeNoteHtml(saveNoteLocallyContent.innerHTML),
+    filename: saveNoteLocallyFileName.value,
   });
-  const fileUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.download = saveNoteLocallyFileName.value;
-  link.href = fileUrl;
-  link.click();
+});
+
+// ---------- payment popups ----------
+
+closeUpgradePopupBtn.addEventListener("click", () => {
+  upgradePopup.classList.remove("see");
+});
+closeErrorPopupBtn.addEventListener("click", () => {
+  errorPopup.classList.remove("see");
 });
 payBtn.addEventListener("click", () => {
   if (navigator.onLine) {
     extpay.openPaymentPage();
   } else {
-    errorBox.classList.add("see");
+    errorPopup.classList.add("see");
   }
 });
+trialBtn.addEventListener("click", () => {
+  extpay.openTrialPage();
+});
 
-// Inscribe being worked on
+// ---------- startup ----------
+
+(async () => {
+  await InscribeStorage.ready();
+  const { myNotes, popupTheme } = await InscribeStorage.get(["myNotes", "popupTheme"]);
+  totalNotes = myNotes || [];
+  InscribeThemes.applyPopupTheme(popupTheme);
+  renderNotes();
+})();

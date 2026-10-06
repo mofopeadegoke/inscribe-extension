@@ -185,3 +185,9 @@ nav ul a:hover::after {
     color: #000;
     
 }
+
+/* Popup theme (set by shared/themes.js) */
+html[data-theme] .btn {
+    background: var(--accent);
+    color: var(--on-accent);
+}
