@@ -34,11 +34,10 @@ const popupBox = document.querySelector(".popup-box"),
 const trialBtn = document.querySelector(".trial");
 var totalNotes = [],
   selectedTheme;
-localStorage.getItem("theme")
-  ? (selectedTheme = localStorage.getItem("theme"))
-  : localStorage.setItem("theme", "yellowMode");
+function saveNotes() {
+  return InscribeStorage.set({ myNotes: totalNotes });
+}
 function renderNotes() {
-  totalNotes = JSON.parse(localStorage.getItem("myNotes"));
   let notes = "";
   if (totalNotes) {
     totalNotes.forEach((note, index) => {
@@ -156,7 +155,14 @@ function renderNotes() {
     }
   }
 }
-window.onload = () => {
+window.onload = async () => {
+  await InscribeStorage.ready();
+  const { myNotes, popupTheme } = await InscribeStorage.get([
+    "myNotes",
+    "popupTheme",
+  ]);
+  totalNotes = myNotes || [];
+  selectedTheme = popupTheme || "yellowMode";
   renderNotes();
 
   deleteNoteBtns = document.querySelectorAll(".deleteNoteBtn");
@@ -166,13 +172,12 @@ window.onload = () => {
   saveNoteLocallyBtns = document.querySelectorAll(".saveNoteLocallyBtn");
   alertBox = document.querySelectorAll(".copiedToClipboardAlert");
   deleteNoteBtns.forEach((elem) => {
-    elem.addEventListener("click", () => {
+    elem.addEventListener("click", async () => {
       let confirmDel = confirm("Are you sure you want to delete note?");
       if (!confirmDel) return;
       noteId = elem.getAttribute("data-id");
       totalNotes.splice(noteId, 1);
-      localStorage.setItem("myNotes", JSON.stringify(totalNotes));
-      renderNotes();
+      await saveNotes();
       window.location.reload();
     });
   });
@@ -307,10 +312,8 @@ updateNoteBtn.addEventListener("click", (e) => {
     date: `${month} ${day}, ${year}`,
   };
   totalNotes[updateId] = note;
-  localStorage.setItem("myNotes", JSON.stringify(totalNotes));
   closePopupBtn.click();
-  renderNotes();
-  window.onload();
+  saveNotes().then(() => window.onload());
 });
 closePopupBtn.addEventListener("click", (e) => {
   titleInputEl.value = "";

@@ -24,56 +24,63 @@ let selectedTool,
   micImgElement = document.querySelector(".micImgReal");
 // console.log(micImgElement);
 
-localStorage.getItem("theme")
-  ? (selectedTheme = localStorage.getItem("theme"))
-  : localStorage.setItem("theme", "yellowMode");
-if (selectedTheme == "yellowMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "rgb(245, 204, 0)";
+InscribeStorage.ready()
+  .then(() => InscribeStorage.get("popupTheme"))
+  .then(({ popupTheme }) => {
+    selectedTheme = popupTheme || "yellowMode";
+    if (!popupTheme) InscribeStorage.set({ popupTheme: selectedTheme });
+    applyTheme();
   });
-  micImgElement.style.fill = "black";
-  sizeSlider.style.accentColor = "rgb(245, 204, 0)";
-} else if (selectedTheme == "blueMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "rgb(245, 204, 0)";
-  });
-  micImgElement.style.fill = "white";
-  sizeSlider.style.accentColor = "#3486eb";
-} else if (selectedTheme == "purpleMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "purple";
-    elem.style.color = "white";
-  });
-  micImgElement.style.fill = "white";
-  sizeSlider.style.accentColor = "purple";
-} else if (selectedTheme == "greenMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "green";
-    elem.style.color = "white";
-  });
-  micImgElement.style.fill = "white";
-  sizeSlider.style.accentColor = "green";
-} else if (selectedTheme == "redMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "darkred";
-    elem.style.color = "white";
-  });
-  micImgElement.style.fill = "white";
-  sizeSlider.style.accentColor = "darkRed";
-} else if (selectedTheme == "pinkMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "pink";
-    elem.style.color = "black";
-  });
-  micImgElement.style.fill = "black";
-  sizeSlider.style.accentColor = "pink";
-} else if (selectedTheme == "darkMode") {
-  document.querySelectorAll(".btn").forEach((elem) => {
-    elem.style.background = "#333";
-    elem.style.color = "white";
-  });
-  micImgElement.style.fill = "white";
-  sizeSlider.style.accentColor = "#333";
+
+function applyTheme() {
+  if (selectedTheme == "yellowMode") {
+    document.querySelectorAll(".btn").forEach((elem) => {
+      elem.style.background = "rgb(245, 204, 0)";
+    });
+    micImgElement.style.fill = "black";
+    sizeSlider.style.accentColor = "rgb(245, 204, 0)";
+  } else if (selectedTheme == "blueMode") {
+    document.querySelectorAll(".btn").forEach((elem) => {
+      elem.style.background = "rgb(245, 204, 0)";
+    });
+    micImgElement.style.fill = "white";
+    sizeSlider.style.accentColor = "#3486eb";
+  } else if (selectedTheme == "purpleMode") {
+    document.querySelectorAll(".btn").forEach((elem) => {
+      elem.style.background = "purple";
+      elem.style.color = "white";
+    });
+    micImgElement.style.fill = "white";
+    sizeSlider.style.accentColor = "purple";
+  } else if (selectedTheme == "greenMode") {
+    document.querySelectorAll(".btn").forEach((elem) => {
+      elem.style.background = "green";
+      elem.style.color = "white";
+    });
+    micImgElement.style.fill = "white";
+    sizeSlider.style.accentColor = "green";
+  } else if (selectedTheme == "redMode") {
+    document.querySelectorAll(".btn").forEach((elem) => {
+      elem.style.background = "darkred";
+      elem.style.color = "white";
+    });
+    micImgElement.style.fill = "white";
+    sizeSlider.style.accentColor = "darkRed";
+  } else if (selectedTheme == "pinkMode") {
+    document.querySelectorAll(".btn").forEach((elem) => {
+      elem.style.background = "pink";
+      elem.style.color = "black";
+    });
+    micImgElement.style.fill = "black";
+    sizeSlider.style.accentColor = "pink";
+  } else if (selectedTheme == "darkMode") {
+    document.querySelectorAll(".btn").forEach((elem) => {
+      elem.style.background = "#333";
+      elem.style.color = "white";
+    });
+    micImgElement.style.fill = "white";
+    sizeSlider.style.accentColor = "#333";
+  }
 }
 extpay
   .getUser()
@@ -121,7 +128,6 @@ window.addEventListener("load", () => {
   canvas.width = canvas.parentElement.offsetWidth;
   canvas.height = canvas.parentElement.offsetHeight;
   setBackgroundColor();
-  renderNotes();
 });
 
 function drawCircle(event) {
@@ -415,13 +421,7 @@ fileExtensionsInputBox.addEventListener("change", () => {
   console.log(selectedOption.split(" ")[0]);
 });
 
-// Saving Notes in Local Storage
-let totalNotes = [],
-  notesFromLocalStorage = JSON.parse(localStorage.getItem("myNotes"));
-if (notesFromLocalStorage) {
-  totalNotes = notesFromLocalStorage;
-  renderNotes();
-}
+// Saving Notes in storage
 const months = [
   "January",
   "February",
@@ -436,12 +436,10 @@ const months = [
   "November",
   "December",
 ];
-saveNotesBtn.addEventListener("click", () => {
-  notesFromLocalStorage = JSON.parse(localStorage.getItem("myNotes"));
-  notesFromLocalStorage
-    ? (totalNotes = notesFromLocalStorage)
-    : (totalNotes = []);
+saveNotesBtn.addEventListener("click", async () => {
   if (fileNameInputBox.value) {
+    await InscribeStorage.ready();
+    const { myNotes = [] } = await InscribeStorage.get("myNotes");
     let dateObj = new Date();
     let month = months[dateObj.getMonth()],
       day = dateObj.getDate(),
@@ -456,11 +454,8 @@ saveNotesBtn.addEventListener("click", () => {
       title: fileNameInputBox.value,
       date: `${month} ${day}, ${year}`,
     };
-    totalNotes[totalNotes.length] = note;
-    localStorage.setItem("myNotes", JSON.stringify(totalNotes));
-    renderNotes();
     textAreaText.textContent = "";
-    localStorage.setItem("liveNote", textAreaText.textContent);
+    await InscribeStorage.set({ myNotes: [...myNotes, note], liveNote: "" });
     fileNameInputBox.value = "";
     fileNameInputBox.style.border = "1px solid black";
   } else {
@@ -472,39 +467,8 @@ saveNotesBtn.addEventListener("click", () => {
 const clearAreaBtn = document.querySelector(".clearTextarea");
 clearAreaBtn.addEventListener("click", () => {
   textAreaText.textContent = "";
-  localStorage.setItem("liveNote", "");
+  InscribeStorage.set({ liveNote: "" });
 });
-let notesContainer = document.querySelector(".notes");
-
-function renderNotes() {
-  totalNotes = JSON.parse(localStorage.getItem("myNotes"));
-  let notes = "";
-  if (totalNotes) {
-    totalNotes.forEach((note, index) => {
-      notes += `
-      <article class="noteDiv">
-        <h3>${note.title}</h3>
-        <span>${note.text}</span>
-        <div class="settings">
-        <p>${note.date}</p>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" onclick="showMenu(this)">
-        <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1  0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-        </svg>
-        <ul class="content">
-        <li>
-        <img src="./images/pencil.svg" alt="A pencil Logo">
-        Edit
-        </li>
-        <li class='deleteNoteBtn' data-id='${note.id}' onclick="deleteNote(${index})">
-        <img src="./images/trash3.svg" alt="A trash can logo">
-        Delete
-        </li>
-        </ul>
-        </div>
-      </article>`;
-    });
-  }
-}
 
 // Extension Pay
 const popupBox = document.querySelector(".popup-box"),
@@ -662,14 +626,8 @@ textAreaText.addEventListener("input", () => {
   }
 });
 
-textAreaText.addEventListener("change", (e) => {
-  var liveSavingNote;
-  liveSavingNote = textAreaText.textContent;
-  const lines = liveSavingNote.split("\n");
-  let storedTextArray = [];
-  storedTextArray = [...storedTextArray, ...lines];
-  var arrayStr = JSON.stringify(storedTextArray);
-  localStorage.setItem("liveNote", liveSavingNote);
+textAreaText.addEventListener("change", () => {
+  InscribeStorage.set({ liveNote: textAreaText.textContent });
 });
 // More formatting Options
 let moreFormatting = document.querySelector(".more"),
@@ -754,12 +712,15 @@ const highlighterRemover = (className) => {
   });
 };
 
-window.onload = () => {
-  if (localStorage.getItem("liveNote")) {
+window.onload = async () => {
+  initializer();
+  await InscribeStorage.ready();
+  const { liveNote } = await InscribeStorage.get("liveNote");
+  if (liveNote) {
     textAreaText.focus();
-    textAreaText.textContent = localStorage.getItem("liveNote");
+    textAreaText.textContent = liveNote;
   } else {
     textAreaText.textContent = "";
   }
-  initializer();
+  previousValue = textAreaText.textContent;
 };
