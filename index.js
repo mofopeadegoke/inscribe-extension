@@ -421,40 +421,17 @@ fileExtensionsInputBox.addEventListener("change", () => {
   console.log(selectedOption.split(" ")[0]);
 });
 
-// Saving Notes in storage
-const months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+// Saving Notes in storage (as sanitized HTML, so formatting is kept)
 saveNotesBtn.addEventListener("click", async () => {
   if (fileNameInputBox.value) {
     await InscribeStorage.ready();
     const { myNotes = [] } = await InscribeStorage.get("myNotes");
-    let dateObj = new Date();
-    let month = months[dateObj.getMonth()],
-      day = dateObj.getDate(),
-      year = dateObj.getFullYear();
-    let textModified = textAreaText.textContent;
-    console.log(textModified);
-    textModified = textModified.replace(/  /g, "\t");
-    textModified = textModified.replace(/\n/g, "<br>\n");
-    console.log(textAreaText.innerHTML);
-    let note = {
-      text: textModified,
+    const note = {
+      text: sanitizeNoteHtml(textAreaText.innerHTML),
       title: fileNameInputBox.value,
-      date: `${month} ${day}, ${year}`,
+      date: formatNoteDate(new Date()),
     };
-    textAreaText.textContent = "";
+    textAreaText.replaceChildren();
     await InscribeStorage.set({ myNotes: [...myNotes, note], liveNote: "" });
     fileNameInputBox.value = "";
     fileNameInputBox.style.border = "1px solid black";
@@ -466,7 +443,7 @@ saveNotesBtn.addEventListener("click", async () => {
 // Clear Textarea Buttonn
 const clearAreaBtn = document.querySelector(".clearTextarea");
 clearAreaBtn.addEventListener("click", () => {
-  textAreaText.textContent = "";
+  textAreaText.replaceChildren();
   InscribeStorage.set({ liveNote: "" });
 });
 
@@ -615,19 +592,13 @@ micBtn.addEventListener("click", () => {
   chrome.tabs.create({ url: "speech.html" });
 });
 
-// Auto Saving
-let previousValue = textAreaText.textContent;
-
+// Auto Saving (debounced; keeps formatting)
+let autosaveTimer = null;
 textAreaText.addEventListener("input", () => {
-  if (previousValue !== textAreaText.textContent) {
-    previousValue = textAreaText.textContent;
-    const event = new Event("change");
-    textAreaText.dispatchEvent(event);
-  }
-});
-
-textAreaText.addEventListener("change", () => {
-  InscribeStorage.set({ liveNote: textAreaText.textContent });
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    InscribeStorage.set({ liveNote: sanitizeNoteHtml(textAreaText.innerHTML) });
+  }, 300);
 });
 // More formatting Options
 let moreFormatting = document.querySelector(".more"),
@@ -716,11 +687,6 @@ window.onload = async () => {
   initializer();
   await InscribeStorage.ready();
   const { liveNote } = await InscribeStorage.get("liveNote");
-  if (liveNote) {
-    textAreaText.focus();
-    textAreaText.textContent = liveNote;
-  } else {
-    textAreaText.textContent = "";
-  }
-  previousValue = textAreaText.textContent;
+  textAreaText.innerHTML = sanitizeNoteHtml(liveNote);
+  if (liveNote) textAreaText.focus();
 };
