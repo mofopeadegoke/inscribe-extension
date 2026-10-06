@@ -26,9 +26,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     });
 });
 
-// Content scripts can't use ExtPay directly, so they ask here.
+// Content scripts don't load ExtPay, so they ask here.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!message || message.type !== "getUser") return false;
+  if (!message) return false;
+  if (message.type === "openPaymentPage") {
+    extpay.openPaymentPage();
+    return false;
+  }
+  if (message.type !== "getUser") return false;
   extpay
     .getUser()
     .then((user) => sendResponse({ user }))

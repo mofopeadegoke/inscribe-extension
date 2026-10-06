@@ -1,4 +1,13 @@
-const extpay = ExtPay("inscribe");
+// Payment status lives in the background worker; content scripts ask it.
+function getUser() {
+  return chrome.runtime.sendMessage({ type: "getUser" }).then((res) => {
+    if (!res || res.error) throw new Error(res ? res.error : "No response");
+    return res.user;
+  });
+}
+function openPaymentPage() {
+  chrome.runtime.sendMessage({ type: "openPaymentPage" });
+}
 let noteContainer = document.createElement("div");
 noteContainer.classList.add("parentContainer");
 let noteRow = document.createElement("div");
@@ -325,7 +334,7 @@ function hasExceededLimit() {
 // Function to perform the user action
 function saveLocally() {
   if (hasExceededLimit()) {
-    extpay.openPaymentPage();
+    openPaymentPage();
     return;
   }
 
@@ -354,8 +363,7 @@ function saveLocally() {
 
 // Saving notes locally
 saveNoteLocallyBtnEl.addEventListener("click", () => {
-  extpay
-    .getUser()
+  getUser()
     .then((user) => {
       if (user.paid) {
         const blob = new Blob([noteContent.textContent], {
