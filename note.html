@@ -9,7 +9,7 @@
 
 </head>
 <body>
-    <div class="popup-box">
+    <div class="popup-box editPopup">
         <div class="popup">
             <div class="Updatecontent">
                 <header>
@@ -23,9 +23,17 @@
                     </div>
                     <div class="row description">
                         <label>Description</label>
-                        <textarea></textarea>
+                        <div class="editorToolbar">
+                            <button type="button" data-command="bold" title="Bold"><b>B</b></button>
+                            <button type="button" data-command="italic" title="Italic"><i>I</i></button>
+                            <button type="button" data-command="underline" title="Underline"><u>U</u></button>
+                            <button type="button" data-command="insertOrderedList" title="Numbered list">1.</button>
+                            <button type="button" data-command="insertUnorderedList" title="Bulleted list">&bull;</button>
+                            <button type="button" data-command="createLink" title="Insert link">Link</button>
+                        </div>
+                        <div class="noteEditor" contenteditable="true"></div>
                     </div>
-                    <button>Update note</button>
+                    <button class="updateNoteBtn">Update note</button>
                 </form>
             </div>
         </div>
@@ -44,6 +52,17 @@
             </div>
         </div>
     </div>
+    <div class="popup-box errorPopup">
+        <div class="popup">
+            <div class="Upgradecontent">
+                <header>
+                    <p>Ooops!</p>
+                    <img src="./images/x-lg.svg" alt="Close Icon">
+                </header>
+                <p>An error occured! Check your internet connection</p>
+            </div>
+        </div>
+    </div>
     <div class="notePopup-box">
         <div class="notePopup">
             <div class="saveNote">
@@ -58,7 +77,7 @@
                     </div>
                     <div class="row description">
                         <label>Description</label>
-                        <textarea class="noteContent"></textarea>
+                        <div class="noteContent noteEditor" contenteditable="true"></div>
                     </div>
                     <div class="flexRow">
                         <input type="text" class="fileName" placeholder="File Name">
@@ -96,6 +115,8 @@
     <script src="./shared/storage.js"></script>
     <script src="./vendor/purify.min.js"></script>
     <script src="./shared/sanitize.js"></script>
+    <script src="./shared/notes.js"></script>
+    <script src="./shared/formatting.js"></script>
     <script src="./note.js"></script>
 </body>
 </html>

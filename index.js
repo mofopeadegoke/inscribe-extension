@@ -645,22 +645,12 @@ const highlighter = (className, needsRemoval) => {
   });
 };
 
-function formatDoc(cmd, value = null) {
-  if (value) {
-    document.execCommand(cmd, false, value);
-  } else {
-    document.execCommand(cmd);
-  }
-}
 optionButtons.forEach((elem) => {
   elem.addEventListener("click", () => {
-    formatDoc(`${elem.id}`);
+    InscribeFormatting.formatDoc(elem.id);
   });
 });
-linkButton.addEventListener("click", () => {
-  let url = prompt("Insert URL");
-  formatDoc("createLink", url);
-});
+linkButton.addEventListener("click", InscribeFormatting.createLink);
 // fontSizeSelect.addEventListener("change", () => {
 //   formatDoc("fontSize", this.value);
 //   this.selectedIndex = 0;
