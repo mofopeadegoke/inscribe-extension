@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "version": "2.2164",
+    "version": "3.0",
     "name": "__MSG_extName__",
     "description": "__MSG_extDescription__",
     "action": {
