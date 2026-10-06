@@ -128,6 +128,8 @@ window.addEventListener("load", () => {
   canvas.width = canvas.parentElement.offsetWidth;
   canvas.height = canvas.parentElement.offsetHeight;
   setBackgroundColor();
+  canvasHistory = [];
+  pushHistory();
 });
 
 function drawCircle(event) {
@@ -154,48 +156,52 @@ function drawLine(event) {
   ctx.lineTo(event.offsetX, event.offsetY);
   ctx.stroke();
 }
-let pathsry = [];
-let points = [];
-let redoArr = [];
-let previous = { x: 0, y: 0 };
-let iouse = { x: 0, y: 0 };
+// Undo/redo keeps a snapshot of the whole canvas after each finished stroke,
+// so shapes, colours, widths and the eraser all come back exactly.
+const MAX_UNDO_STEPS = 30;
+let canvasHistory = []; // last entry is the current canvas
+let redoStack = [];
 
-// Assuming ctx, canvas, toolsBtn, sizeSlider, colorBtns, colorPicker, and clearCanvas are already defined
+function pushHistory() {
+  canvasHistory.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  if (canvasHistory.length > MAX_UNDO_STEPS + 1) canvasHistory.shift();
+  redoStack = [];
+}
+
+function undo() {
+  if (canvasHistory.length < 2) return;
+  redoStack.push(canvasHistory.pop());
+  ctx.putImageData(canvasHistory[canvasHistory.length - 1], 0, 0);
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  const next = redoStack.pop();
+  canvasHistory.push(next);
+  ctx.putImageData(next, 0, 0);
+}
 
 function startDrawing(event) {
   isDrawing = true;
   mouse.x = event.offsetX;
   mouse.y = event.offsetY;
-  previous = { x: mouse.x, y: mouse.y };
-  iouse = oMousePos(canvas, event);
-  points = [{ x: iouse.x, y: iouse.y }];
   ctx.lineWidth = brushWidth;
   ctx.strokeStyle = selectedColor;
   ctx.fillStyle = selectedColor;
   ctx.beginPath();
+  ctx.moveTo(mouse.x, mouse.y);
   snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-}
-
-function oMousePos(canvas, evt) {
-  var ClientRect = canvas.getBoundingClientRect();
-  return {
-    x: Math.round(evt.clientX - ClientRect.left),
-    y: Math.round(evt.clientY - ClientRect.top),
-  };
 }
 
 canvas.addEventListener("mousemove", (event) => {
   if (!isDrawing) return;
 
-  previous = { x: iouse.x, y: iouse.y };
-  iouse = oMousePos(canvas, event);
-  points.push({ x: iouse.x, y: iouse.y });
   ctx.putImageData(snapshot, 0, 0);
 
   if (selectedTool === "brush" || selectedTool === "eraser") {
     ctx.strokeStyle = selectedTool === "eraser" ? "#FFF" : selectedColor;
     ctx.lineWidth = brushWidth;
-    ctx.lineTo(iouse.x, iouse.y);
+    ctx.lineTo(event.offsetX, event.offsetY);
     ctx.stroke();
   } else if (selectedTool === "rectangle") {
     drawRect(event);
@@ -214,48 +220,11 @@ canvas.addEventListener("mouseup", endDrawing);
 function endDrawing() {
   if (!isDrawing) return;
   isDrawing = false;
-  pathsry.push([...points]);
-  redoArr = [];
-  allowRedo = false;
+  pushHistory();
 }
 
-function drawPaths() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  pathsry.forEach((path) => {
-    if (path.length < 1) return;
-    ctx.beginPath();
-    ctx.moveTo(path[0].x, path[0].y);
-    for (let i = 1; i < path.length; i++) {
-      ctx.lineTo(path[i].x, path[i].y);
-    }
-    ctx.stroke();
-  });
-}
-
-let allowRedo = false;
-
-function Undo() {
-  if (pathsry.length > 0) {
-    redoArr.push(pathsry.pop());
-    allowRedo = true;
-    drawPaths();
-  }
-}
-
-function Redo() {
-  if (allowRedo && redoArr.length > 0) {
-    pathsry.push(redoArr.pop());
-    drawPaths();
-    if (redoArr.length === 0) {
-      allowRedo = false;
-    }
-  }
-}
-
-let undoBtn = document.querySelector(".undo-btn");
-undoBtn.addEventListener("click", Undo);
-let redoBtn = document.querySelector(".redo-btn");
-redoBtn.addEventListener("click", Redo);
+document.querySelector(".undo-btn").addEventListener("click", undo);
+document.querySelector(".redo-btn").addEventListener("click", redo);
 
 toolsBtn.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -285,10 +254,8 @@ colorPicker.addEventListener("change", () => {
 });
 
 clearCanvas.addEventListener("click", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  pathsry = [];
-  redoArr = [];
-  setBackgroundColor();
+  setBackgroundColor(); // paint white rather than clear, so exports aren't transparent
+  pushHistory(); // clearing can be undone
 });
 
 // saveImage.addEventListener("click", () => {
