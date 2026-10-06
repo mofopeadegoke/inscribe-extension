@@ -1,27 +1,37 @@
 // Extension Pay
 importScripts("ExtPay.js");
 
-// To test payments, replace 'sample-extension' with the ID of
-// the extension you registered on ExtensionPay.com. You may
-// need to uninstall and reinstall the extension.
-// And don't forget to change the ID in popup.js too!
 const extpay = ExtPay("inscribe");
 extpay.startBackground(); // this line is required to use ExtPay in the rest of your extension
 
-extpay.getUser().then((user) => {
-  // console.log(user);
-});
+const STICKY_MENU_ID = "add-sticky-note";
 
-chrome.contextMenus.create({
-  id: "id",
-  title: "Add an Inscribe Sticky Note here",
-  contexts: ["all"],
+// Menu items persist across service-worker restarts, so create them only on install/update.
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: STICKY_MENU_ID,
+    title: "Add an Inscribe Sticky Note here",
+    contexts: ["all"],
+  });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "id") {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, { action: "runContentScript" });
+  if (info.menuItemId !== STICKY_MENU_ID || !tab || tab.id === undefined) return;
+  chrome.tabs
+    .sendMessage(tab.id, { action: "runContentScript" })
+    .catch((err) => {
+      // No content script on this page (chrome:// pages, the Web Store, or a
+      // tab opened before Inscribe was installed and not reloaded since).
+      console.warn("Inscribe: could not open a sticky note on this page.", err);
     });
-  }
+});
+
+// Content scripts can't use ExtPay directly, so they ask here.
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.type !== "getUser") return false;
+  extpay
+    .getUser()
+    .then((user) => sendResponse({ user }))
+    .catch((err) => sendResponse({ error: String(err) }));
+  return true; // keep the channel open for the async response
 });
