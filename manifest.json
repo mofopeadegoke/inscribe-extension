@@ -28,7 +28,7 @@
         },
         {
             "matches": ["<all_urls>"],
-            "js": ["contentOwn.js"]
+            "js": ["shared/timePhrases.js", "contentOwn.js"]
         }
     ],
     "web_accessible_resources": [
