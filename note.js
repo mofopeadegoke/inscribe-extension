@@ -82,11 +82,6 @@ function renderNotes() {
   applyNoteTheme();
 }
 
-function htmlToPlainText(html) {
-  const doc = new DOMParser().parseFromString(sanitizeNoteHtml(html), "text/html");
-  return doc.body.innerText;
-}
-
 // ---------- note actions (one delegated handler for the whole list) ----------
 
 const noteActions = {
@@ -110,7 +105,9 @@ const noteActions = {
   },
 
   copyBtn(article, target, id) {
-    navigator.clipboard.writeText(htmlToPlainText(totalNotes[id].text));
+    navigator.clipboard.writeText(
+      InscribeDownload.htmlToText(sanitizeNoteHtml(totalNotes[id].text))
+    );
     const copiedAlert = article.querySelector(".copiedToClipboardAlert");
     copiedAlert.classList.add("alertShow");
     setTimeout(() => copiedAlert.classList.remove("alertShow"), 3100);
@@ -196,14 +193,11 @@ fileExtensionBox.addEventListener("change", () => {
 
 saveNoteLocallyActionBtn.addEventListener("click", (e) => {
   e.preventDefault();
-  const blob = new Blob([saveNoteLocallyContent.innerText], {
-    type: fileExtensionBox.value,
+  InscribeDownload.exportNote(fileExtensionBox.value, {
+    title: saveNoteLocallyTitle.value,
+    html: sanitizeNoteHtml(saveNoteLocallyContent.innerHTML),
+    filename: saveNoteLocallyFileName.value,
   });
-  const fileUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.download = saveNoteLocallyFileName.value;
-  link.href = fileUrl;
-  link.click();
 });
 
 // ---------- payment popups ----------

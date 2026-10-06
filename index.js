@@ -481,14 +481,10 @@ extpay
       (user.trialStartedAt && now - user.trialStartedAt < sevenDays)
     ) {
       saveAsFileBtn.addEventListener("click", () => {
-        const blob = new Blob([textAreaText.textContent], {
-          type: fileExtensionsInputBox.value,
+        InscribeDownload.exportNote(fileExtensionsInputBox.value, {
+          title: fileNameInputBox.value,
+          html: sanitizeNoteHtml(textAreaText.innerHTML),
         });
-        const fileUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.download = fileNameInputBox.value;
-        link.href = fileUrl;
-        link.click();
       });
       saveImage.addEventListener("click", () => {
         const link = document.createElement("a");
