@@ -98,7 +98,7 @@ extpay
   })
   .catch((err) => {});
 
-const mouse = {
+const strokeStart = {
   x: undefined,
   y: undefined,
 };
@@ -107,15 +107,15 @@ function drawRect(event) {
     return ctx.strokeRect(
       event.offsetX,
       event.offsetY,
-      mouse.x - event.offsetX,
-      mouse.y - event.offsetY
+      strokeStart.x - event.offsetX,
+      strokeStart.y - event.offsetY
     );
   }
   ctx.fillRect(
     event.offsetX,
     event.offsetY,
-    mouse.x - event.offsetX,
-    mouse.y - event.offsetY
+    strokeStart.x - event.offsetX,
+    strokeStart.y - event.offsetY
   );
 }
 
@@ -135,24 +135,24 @@ window.addEventListener("load", () => {
 function drawCircle(event) {
   ctx.beginPath();
   let radius = Math.sqrt(
-    Math.pow(mouse.x - event.offsetX, 2) + Math.pow(mouse.y - event.offsetY, 2)
+    Math.pow(strokeStart.x - event.offsetX, 2) + Math.pow(strokeStart.y - event.offsetY, 2)
   );
-  ctx.arc(mouse.x, mouse.y, radius, 0, 2 * Math.PI);
+  ctx.arc(strokeStart.x, strokeStart.y, radius, 0, 2 * Math.PI);
   fillColor.checked ? ctx.fill() : ctx.stroke();
 }
 
 function drawTriangle(event) {
   ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
+  ctx.moveTo(strokeStart.x, strokeStart.y);
   ctx.lineTo(event.offsetX, event.offsetY);
-  ctx.lineTo(mouse.x * 2 - event.offsetX, event.offsetY);
+  ctx.lineTo(strokeStart.x * 2 - event.offsetX, event.offsetY);
   ctx.closePath();
   fillColor.checked ? ctx.fill() : ctx.stroke();
 }
 
 function drawLine(event) {
   ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
+  ctx.moveTo(strokeStart.x, strokeStart.y);
   ctx.lineTo(event.offsetX, event.offsetY);
   ctx.stroke();
 }
@@ -183,17 +183,20 @@ function redo() {
 
 function startDrawing(event) {
   isDrawing = true;
-  mouse.x = event.offsetX;
-  mouse.y = event.offsetY;
+  strokeStart.x = event.offsetX;
+  strokeStart.y = event.offsetY;
   ctx.lineWidth = brushWidth;
   ctx.strokeStyle = selectedColor;
   ctx.fillStyle = selectedColor;
   ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
+  ctx.moveTo(strokeStart.x, strokeStart.y);
   snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-canvas.addEventListener("mousemove", (event) => {
+// Pointer Events cover mouse, touch and pen with one code path; offsetX/Y
+// are always relative to the canvas, whatever the scroll position.
+canvas.style.touchAction = "none"; // don't scroll the page while drawing
+canvas.addEventListener("pointermove", (event) => {
   if (!isDrawing) return;
 
   ctx.putImageData(snapshot, 0, 0);
@@ -214,8 +217,12 @@ canvas.addEventListener("mousemove", (event) => {
   }
 });
 
-canvas.addEventListener("mousedown", startDrawing);
-canvas.addEventListener("mouseup", endDrawing);
+canvas.addEventListener("pointerdown", (event) => {
+  canvas.setPointerCapture(event.pointerId); // keep drawing if the pointer leaves the canvas
+  startDrawing(event);
+});
+canvas.addEventListener("pointerup", endDrawing);
+canvas.addEventListener("pointercancel", endDrawing);
 
 function endDrawing() {
   if (!isDrawing) return;
@@ -288,97 +295,6 @@ optionUI.addEventListener("mouseover", () => {
 optionUI.addEventListener("mouseleave", () => {
   optionUI.style.display = "none";
 });
-
-// Touch Drawing
-const rectLeft = canvas.getBoundingClientRect().left;
-const rectTop = canvas.getBoundingClientRect().top;
-function startTouchDrawing(event) {
-  [...event.changedTouches].forEach((touch) => {
-    isDrawing = true;
-    mouse.x = touch.pageX - rectLeft;
-    mouse.y = touch.pageY - rectTop;
-    // console.log(touch);
-    ctx.lineWidth = brushWidth;
-    ctx.strokeStyle = selectedColor;
-    ctx.fillStyle = selectedColor;
-    ctx.beginPath();
-    snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  });
-}
-
-canvas.addEventListener("touchmove", (event) => {
-  [...event.changedTouches].forEach((touch) => {
-    if (!isDrawing) return;
-    ctx.putImageData(snapshot, 0, 0);
-    // console.log(rectLeft);
-    if (selectedTool === "brush" || selectedTool === "eraser") {
-      ctx.strokeStyle = selectedTool === "eraser" ? "#FFF" : selectedColor;
-      ctx.lineWidth = brushWidth;
-      ctx.lineTo(touch.pageX - rectLeft, touch.pageY - rectTop);
-      ctx.stroke();
-    } else if (selectedTool === "rectangle") {
-      drawTouchRect(touch);
-    } else if (selectedTool === "circle") {
-      drawTouchCircle(touch);
-    } else if (selectedTool === "triangle") {
-      drawTouchTriangle(touch);
-    } else if (selectedTool === "line") {
-      drawTouchLine(touch);
-    }
-  });
-});
-
-function drawTouchRect(touch) {
-  if (!fillColor.checked) {
-    return ctx.strokeRect(
-      touch.pageX - rectLeft,
-      touch.pageY - rectTop,
-      mouse.x - (touch.pageX - rectLeft),
-      mouse.y - (touch.pageY - rectTop)
-    );
-  }
-  ctx.fillRect(
-    touch.pageX - rectLeft,
-    touch.pageY - rectTop,
-    mouse.x - (touch.pageX - rectLeft),
-    mouse.y - touch.pageY - rectTop
-  );
-}
-
-function drawTouchCircle(touch) {
-  ctx.beginPath();
-  let radius = Math.sqrt(
-    Math.pow(mouse.x - (touch.pageX - rectLeft), 2) +
-      Math.pow(mouse.y - (touch.pageY - rectTop), 2)
-  );
-  ctx.arc(
-    touch.pageX - rectLeft,
-    touch.pageY - rectTop,
-    radius,
-    0,
-    2 * Math.PI
-  );
-  fillColor.checked ? ctx.fill() : ctx.stroke();
-}
-
-function drawTouchTriangle(touch) {
-  ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
-  ctx.lineTo(touch.pageX - rectLeft, touch.pageY - rectTop);
-  ctx.lineTo(mouse.x * 2 - (touch.pageX - rectLeft), touch.pageY - rectTop);
-  ctx.closePath();
-  fillColor.checked ? ctx.fill() : ctx.stroke();
-}
-
-function drawTouchLine(touch) {
-  ctx.beginPath();
-  ctx.moveTo(mouse.x, mouse.y);
-  ctx.lineTo(touch.pageX - rectLeft, touch.pageY - rectTop);
-  ctx.stroke();
-}
-
-canvas.addEventListener("touchstart", startTouchDrawing);
-canvas.addEventListener("touchend", endDrawing);
 
 // Saving Note locally as a file
 fileExtensionsInputBox.addEventListener("change", () => {
